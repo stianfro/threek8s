@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.5](https://github.com/stianfro/threek8s/compare/v1.0.4...v1.0.5) (2025-09-25)
+
+
+### Bug Fixes
+
+* remove unnecessary image verification steps ([ea00243](https://github.com/stianfro/threek8s/commit/ea002436f3d99f620dd7dd46497b3a4a634e9b79))
+* resolve Kubernetes deployment crashes in OpenShift ([2104597](https://github.com/stianfro/threek8s/commit/2104597237ab64f2bb0517313752a3a98155bd47))
+
 ## [1.0.4](https://github.com/stianfro/threek8s/compare/v1.0.3...v1.0.4) (2025-09-25)
 
 
