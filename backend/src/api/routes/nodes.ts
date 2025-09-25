@@ -60,7 +60,7 @@ export function createNodesRouter(stateManager: StateManager): Router {
         }))
       });
     } catch (error) {
-      console.error(`Failed to get node ${req.params.nodeName}:`, error);
+      console.error('Failed to get node %s:', req.params.nodeName, error);
       res.status(500).json({
         error: 'INTERNAL_ERROR',
         message: 'Failed to retrieve node details',
