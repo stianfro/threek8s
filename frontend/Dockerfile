@@ -24,12 +24,8 @@ COPY package*.json ./
 RUN npm ci --no-audit --no-fund && \
     npm cache clean --force
 
-# Copy source code and other necessary files
-COPY tsconfig.json ./
-COPY vite.config.ts ./
-COPY index.html ./
-COPY public ./public/
-COPY src ./src/
+# Copy all source files (excluding those in .dockerignore)
+COPY . .
 
 # Build the React/Three.js application
 RUN npm run build

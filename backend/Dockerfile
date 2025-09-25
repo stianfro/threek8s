@@ -16,9 +16,8 @@ COPY package*.json ./
 # Install all dependencies (including devDependencies for build)
 RUN npm ci --include=dev
 
-# Copy TypeScript configuration and source code
-COPY tsconfig.json ./
-COPY src ./src/
+# Copy all source files (excluding those in .dockerignore)
+COPY . .
 
 # Build the TypeScript application
 RUN npm run build
