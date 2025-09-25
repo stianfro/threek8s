@@ -1,6 +1,6 @@
 {
   "name": "threek8s-backend",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Backend API for Kubernetes 3D visualization",
   "main": "dist/index.js",
   "scripts": {
