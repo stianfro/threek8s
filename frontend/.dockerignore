@@ -1,20 +1,69 @@
+# Dependencies and build artifacts
 node_modules
 npm-debug.log
-dist
+dist/
+build/
+.next
+out
+
+# Environment files (exclude all except .env.example)
 .env
 .env.local
 .env.*.local
+
+# Version control
 .git
 .gitignore
+.gitmodules
+
+# IDE and editor files
 .vscode
 .idea
+*.swp
+*.swo
+*~
+
+# Logs and temporary files
 *.log
-*.md
+logs
 .DS_Store
+.history
+.temp
+.tmp
+
+# Testing and coverage
 coverage
 .nyc_output
+test-results
+junit.xml
+
+# Configuration files (only needed during development)
 .eslintrc*
 .prettierrc*
-Dockerfile
+jest.config.*
+vitest.config.*
+tsconfig.json
+
+# Docker-related files (not needed in image)
+docker-compose*.yml
+Dockerfile*
 .dockerignore
-nginx.conf
+
+# Documentation (not needed in runtime)
+*.md
+README*
+CHANGELOG*
+LICENSE*
+docs/
+
+# Build tools and configurations
+webpack.config.*
+vite.config.*
+rollup.config.*
+babel.config.*
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride

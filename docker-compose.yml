@@ -3,13 +3,13 @@ version: '3.8'
 services:
   backend:
     build: ./backend
-    image: threek8s-backend
+    image: threek8s-backend:local
     container_name: threek8s-backend
     ports:
-      - "3001:3001"
+      - "8080:8080"
     environment:
       - NODE_ENV=production
-      - PORT=3001
+      - PORT=8080
     volumes:
       - ~/.kube:/root/.kube:ro
     env_file:
@@ -18,7 +18,7 @@ services:
       - threek8s-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -26,17 +26,20 @@ services:
 
   frontend:
     build: ./frontend
-    image: threek8s-frontend
+    image: threek8s-frontend:local
     container_name: threek8s-frontend
     ports:
-      - "5173:80"
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+      - VITE_WS_URL=ws://localhost:8080
     depends_on:
       - backend
     networks:
       - threek8s-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3

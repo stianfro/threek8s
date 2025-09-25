@@ -12,7 +12,11 @@
     "test:integration": "vitest run tests/integration",
     "test:unit": "vitest run tests/unit",
     "lint": "eslint src --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "docker:build": "docker build -t threek8s-backend .",
+    "docker:build:multi": "docker buildx build --platform linux/amd64,linux/arm64 -t threek8s-backend .",
+    "docker:run": "docker run -p 8080:8080 --env-file .env threek8s-backend",
+    "docker:test": "docker build -t threek8s-backend:test . && docker run --rm threek8s-backend:test npm test"
   },
   "keywords": [
     "kubernetes",

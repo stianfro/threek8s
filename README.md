@@ -20,7 +20,37 @@ A real-time 3D visualization tool for Kubernetes clusters using Three.js. Watch 
 
 ## 🚀 Quick Start
 
-### Using Just (Recommended)
+### Using Helm (Kubernetes)
+
+Deploy ThreeK8s directly to your Kubernetes cluster:
+
+```bash
+# Install using Helm from OCI registry
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version latest
+
+# Install with custom values
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
+  --set frontend.env.API_URL=https://api.example.com \
+  --set backend.env.LOG_LEVEL=debug
+```
+
+### Using Docker Compose
+
+Run locally using pre-built Docker images:
+
+```bash
+# Clone the repository
+git clone https://github.com/stianfro/threek8s.git
+cd threek8s
+
+# Start with docker-compose
+docker-compose up -d
+
+# Access the application
+open http://localhost:3000
+```
+
+### Using Just (Development)
 
 [Just](https://github.com/casey/just) is a command runner that simplifies running multiple commands.
 
@@ -32,7 +62,7 @@ brew install just
 curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
 # Clone and setup
-git clone https://github.com/yourusername/threek8s.git
+git clone https://github.com/stianfro/threek8s.git
 cd threek8s
 
 # One-time setup
@@ -42,11 +72,11 @@ just init
 just dev
 ```
 
-### Manual Setup
+### Manual Setup (Development)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/threek8s.git
+git clone https://github.com/stianfro/threek8s.git
 cd threek8s
 
 # Install dependencies
@@ -279,29 +309,69 @@ cd frontend
 npm test
 ```
 
-## 🚢 Deployment
+## 🚢 Deployment & Release Artifacts
+
+### Available Artifacts
+
+ThreeK8s provides production-ready release artifacts:
+
+#### Docker Images
+
+Multi-architecture images supporting both `amd64` and `arm64`:
+
+- **Backend**: `ghcr.io/stianfro/threek8s/backend:<version>`
+- **Frontend**: `ghcr.io/stianfro/threek8s/frontend:<version>`
+- **Latest**: Always points to the most recent stable release
+
+```bash
+# Pull specific version
+docker pull ghcr.io/stianfro/threek8s/backend:v1.0.0
+docker pull ghcr.io/stianfro/threek8s/frontend:v1.0.0
+
+# Pull latest version
+docker pull ghcr.io/stianfro/threek8s/backend:latest
+docker pull ghcr.io/stianfro/threek8s/frontend:latest
+```
+
+#### Helm Chart
+
+Production-ready Helm chart with extensive configuration options:
+
+- **OCI Registry**: `oci://ghcr.io/stianfro/threek8s/chart`
+- **Features**: RBAC, HPA, PDB, NetworkPolicies, Ingress support
+- **Versions**: Independent chart versioning from application version
+
+```bash
+# Install latest version
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart
+
+# Install specific version
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
+
+# Upgrade existing deployment
+helm upgrade threek8s oci://ghcr.io/stianfro/threek8s/chart
+```
 
 ### Docker Deployment
 
-Using just commands:
+Using pre-built images:
 
 ```bash
-# Build images
-just docker-build
+# Using docker-compose with official images
+docker-compose up -d
 
-# Run with docker-compose
-just docker-run
-
-# Stop containers
-just docker-stop
+# Or run manually
+docker run -d -p 8080:8080 ghcr.io/stianfro/threek8s/backend:latest
+docker run -d -p 3000:80 ghcr.io/stianfro/threek8s/frontend:latest
 ```
 
-Manual Docker commands:
+Building from source:
 
 ```bash
-# Build images
-docker build -t threek8s-backend ./backend
-docker build -t threek8s-frontend ./frontend
+# Build images locally
+just docker-build
+# or
+npm run docker:build
 
 # Run with docker-compose
 docker-compose up -d
@@ -314,15 +384,18 @@ docker-compose down
 ```
 
 The application includes:
-- **Dockerfiles** for both backend and frontend
-- **docker-compose.yml** for orchestration
+- **Multi-stage Dockerfiles** for optimized image size
+- **docker-compose.yml** for local orchestration
 - **nginx.conf** for optimized frontend serving
-- Health checks for both services
+- Health checks and readiness probes
 - Non-root user execution for security
+- Support for environment variable configuration
 
 ### Kubernetes Deployment
 
-Deploy ThreeK8s inside your cluster:
+#### Using Helm (Recommended)
+
+Deploy ThreeK8s with full production configuration:
 
 ```yaml
 # kubernetes/deployment.yaml

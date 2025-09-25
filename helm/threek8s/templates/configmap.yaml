@@ -1,0 +1,23 @@
+{{- if .Values.configMap.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "threek8s.configMapName" . }}
+  labels:
+    {{- include "threek8s.labels" . | nindent 4 }}
+data:
+  # Backend environment variables
+  PORT: {{ .Values.backend.env.PORT | quote }}
+  NODE_ENV: {{ .Values.backend.env.NODE_ENV | quote }}
+  WS_HEARTBEAT_INTERVAL: {{ .Values.backend.env.WS_HEARTBEAT_INTERVAL | quote }}
+  WS_HEARTBEAT_TIMEOUT: {{ .Values.backend.env.WS_HEARTBEAT_TIMEOUT | quote }}
+  CORS_ORIGINS: {{ .Values.backend.env.CORS_ORIGINS | quote }}
+
+  # Frontend environment variables
+  VITE_API_URL: {{ .Values.frontend.env.VITE_API_URL | quote }}
+  VITE_WS_URL: {{ .Values.frontend.env.VITE_WS_URL | quote }}
+
+  {{- with .Values.configMap.data }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}

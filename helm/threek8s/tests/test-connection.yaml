@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "threek8s.fullname" . }}-test-connection"
+  labels:
+    {{- include "threek8s.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "threek8s.fullname" . }}-frontend:{{ .Values.frontend.service.port }}']
+    - name: wget-backend
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "threek8s.fullname" . }}-backend:{{ .Values.backend.service.port }}/health']

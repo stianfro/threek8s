@@ -1,0 +1,210 @@
+name: Publish Helm Chart
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'chart-v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      chart_version:
+        description: 'Chart version to publish'
+        required: true
+        type: string
+      app_version:
+        description: 'App version for the chart'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      chart_version:
+        description: 'Chart version to publish'
+        required: true
+        type: string
+      app_version:
+        description: 'App version for the chart'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  CHART_NAME: threek8s
+  CHART_PATH: ./helm/threek8s
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Lint Helm chart
+        run: |
+          helm lint ${{ env.CHART_PATH }}
+
+      - name: Template Helm chart
+        run: |
+          helm template test-release ${{ env.CHART_PATH }} --debug
+
+      - name: Validate chart version
+        run: |
+          CHART_VERSION=$(grep '^version:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}')
+          echo "Chart version: $CHART_VERSION"
+          if [[ ! "$CHART_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Chart version must follow semantic versioning"
+            exit 1
+          fi
+
+  package:
+    needs: lint
+    runs-on: ubuntu-latest
+    outputs:
+      chart_version: ${{ steps.version.outputs.chart_version }}
+      app_version: ${{ steps.version.outputs.app_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Determine versions
+        id: version
+        run: |
+          # Determine chart version
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.event_name }}" == "workflow_call" ]]; then
+            CHART_VERSION="${{ inputs.chart_version }}"
+            APP_VERSION="${{ inputs.app_version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/chart-v* ]]; then
+            # Chart-specific tag
+            CHART_VERSION="${GITHUB_REF#refs/tags/chart-}"
+            APP_VERSION=$(grep '^appVersion:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}' | tr -d '"')
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # Regular version tag - update both
+            VERSION="${GITHUB_REF#refs/tags/}"
+            CHART_VERSION="${VERSION#v}"
+            APP_VERSION="${VERSION#v}"
+          else
+            # Release event
+            VERSION="${{ github.event.release.tag_name }}"
+            CHART_VERSION="${VERSION#v}"
+            APP_VERSION="${VERSION#v}"
+          fi
+
+          # Update Chart.yaml if versions differ
+          CURRENT_CHART_VERSION=$(grep '^version:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}')
+          CURRENT_APP_VERSION=$(grep '^appVersion:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}' | tr -d '"')
+
+          if [[ "$CHART_VERSION" != "$CURRENT_CHART_VERSION" ]]; then
+            sed -i "s/^version:.*/version: $CHART_VERSION/" ${{ env.CHART_PATH }}/Chart.yaml
+          fi
+
+          if [[ -n "$APP_VERSION" ]] && [[ "$APP_VERSION" != "$CURRENT_APP_VERSION" ]]; then
+            sed -i "s/^appVersion:.*/appVersion: \"$APP_VERSION\"/" ${{ env.CHART_PATH }}/Chart.yaml
+          fi
+
+          echo "chart_version=$CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "app_version=${APP_VERSION:-$CURRENT_APP_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Update dependencies
+        run: |
+          helm dependency update ${{ env.CHART_PATH }}
+
+      - name: Package Helm chart
+        run: |
+          helm package ${{ env.CHART_PATH }} --destination ./dist
+
+      - name: Upload chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart
+          path: ./dist/*.tgz
+
+  publish-oci:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download chart artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: helm-chart
+          path: ./dist
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Log in to Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} --username ${{ github.actor }} --password-stdin
+
+      - name: Push Helm chart to OCI registry
+        run: |
+          CHART_FILE=$(ls ./dist/*.tgz)
+          CHART_VERSION="${{ needs.package.outputs.chart_version }}"
+
+          # Push to OCI registry
+          helm push $CHART_FILE oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.CHART_NAME }}
+
+      - name: Verify chart in registry
+        run: |
+          helm show chart oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.CHART_NAME }}/${{ env.CHART_NAME }} --version ${{ needs.package.outputs.chart_version }}
+
+  create-release:
+    needs: [package, publish-oci]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download chart artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: helm-chart
+          path: ./dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./dist/*.tgz
+          body: |
+            ## Helm Chart Release
+
+            **Chart Version:** ${{ needs.package.outputs.chart_version }}
+            **App Version:** ${{ needs.package.outputs.app_version }}
+
+            ### Installation
+
+            ```bash
+            # Install from OCI registry
+            helm install ${{ env.CHART_NAME }} oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.CHART_NAME }}/${{ env.CHART_NAME }} --version ${{ needs.package.outputs.chart_version }}
+
+            # Install with custom values
+            helm install ${{ env.CHART_NAME }} oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.CHART_NAME }}/${{ env.CHART_NAME }} --version ${{ needs.package.outputs.chart_version }} -f my-values.yaml
+            ```
+
+            ### Upgrade
+
+            ```bash
+            helm upgrade ${{ env.CHART_NAME }} oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.CHART_NAME }}/${{ env.CHART_NAME }} --version ${{ needs.package.outputs.chart_version }}
+            ```
+          generate_release_notes: true

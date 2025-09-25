@@ -56,8 +56,16 @@ export function createClusterRouter(
           nodeCount: metrics.totalNodes,
           podCount: metrics.totalPods,
           namespaceCount: state.namespaces.length,
-          nodesByStatus: metrics.nodesByStatus,
-          podsByStatus: metrics.podsByStatus,
+          nodesByStatus: {
+            ready: metrics.readyNodes,
+            notReady: metrics.totalNodes - metrics.readyNodes
+          },
+          podsByStatus: {
+            running: metrics.runningPods,
+            pending: metrics.pendingPods,
+            failed: metrics.failedPods,
+            other: metrics.totalPods - metrics.runningPods - metrics.pendingPods - metrics.failedPods
+          },
           timestamp: new Date().toISOString()
         },
         clusterInfo: await kubernetesService.getClusterInfo()

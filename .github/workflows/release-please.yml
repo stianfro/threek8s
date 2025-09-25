@@ -1,0 +1,97 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      pr: ${{ steps.release.outputs.pr }}
+    steps:
+      - name: Release Please
+        uses: google-github-actions/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Checkout repository
+        if: ${{ steps.release.outputs.releases_created }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+  build-images:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.releases_created }}
+    uses: ./.github/workflows/publish-images.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit
+
+  publish-helm:
+    needs: [release-please, build-images]
+    if: ${{ needs.release-please.outputs.releases_created }}
+    uses: ./.github/workflows/publish-helm.yml
+    with:
+      chart_version: ${{ needs.release-please.outputs.version }}
+      app_version: ${{ needs.release-please.outputs.version }}
+    secrets: inherit
+
+  update-release:
+    needs: [release-please, build-images, publish-helm]
+    if: ${{ needs.release-please.outputs.releases_created }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update Release Notes
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          append_body: true
+          body: |
+
+            ## 🚀 Deployment
+
+            ### Docker Images
+            The following images have been published to GitHub Container Registry:
+            - Backend: `ghcr.io/stianfro/threek8s/backend:${{ needs.release-please.outputs.version }}`
+            - Frontend: `ghcr.io/stianfro/threek8s/frontend:${{ needs.release-please.outputs.version }}`
+
+            ### Helm Chart
+            Install the application using Helm:
+            ```bash
+            helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version ${{ needs.release-please.outputs.version }}
+            ```
+
+            ### Docker Compose
+            Run locally with Docker Compose:
+            ```bash
+            docker-compose up -d
+            ```
+
+            ## 📦 Assets
+            - Docker images support both `amd64` and `arm64` architectures
+            - Helm chart includes full Kubernetes deployment configuration
+            - All artifacts are signed and include provenance attestation
+
+            ## 📚 Documentation
+            - [Installation Guide](./helm/threek8s/README.md)
+            - [Configuration Options](./helm/threek8s/values.yaml)
+            - [Release Process](./RELEASING.md)

@@ -1,0 +1,211 @@
+# Production values for threek8s
+# This is an example of how to configure ThreeK8s for a production deployment
+
+# Frontend configuration for production
+frontend:
+  enabled: true
+  replicaCount: 3
+  image:
+    tag: "v1.0.0"  # Use specific version instead of latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+  env:
+    VITE_API_URL: "https://threek8s-api.example.com/api"
+    VITE_WS_URL: "wss://threek8s-api.example.com/ws"
+
+# Backend configuration for production
+backend:
+  enabled: true
+  replicaCount: 2
+  image:
+    tag: "v1.0.0"  # Use specific version instead of latest
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+  env:
+    PORT: "8080"
+    NODE_ENV: "production"
+    WS_HEARTBEAT_INTERVAL: "30000"
+    WS_HEARTBEAT_TIMEOUT: "10000"
+    CORS_ORIGINS: "https://threek8s.example.com"
+
+# Enable ingress for external access
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/websocket-services: "threek8s-backend"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: threek8s.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: threek8s-frontend
+            port: 80
+    - host: threek8s-api.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service:
+            name: threek8s-backend
+            port: 8080
+        - path: /ws
+          pathType: Prefix
+          service:
+            name: threek8s-backend
+            port: 8080
+  tls:
+    - secretName: threek8s-tls
+      hosts:
+        - threek8s.example.com
+        - threek8s-api.example.com
+
+# Enable autoscaling
+autoscaling:
+  frontend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  backend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Enable Pod Disruption Budgets
+podDisruptionBudget:
+  frontend:
+    enabled: true
+    minAvailable: 50%
+  backend:
+    enabled: true
+    minAvailable: 1
+
+# Network security
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+# RBAC with minimal required permissions
+rbac:
+  create: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services", "endpoints", "namespaces", "nodes"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["extensions", "networking.k8s.io"]
+      resources: ["ingresses"]
+      verbs: ["get", "list", "watch"]
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/threek8s-service-role  # Example for AWS EKS
+
+# Security contexts
+frontend:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 2000
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1001
+
+backend:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 2000
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: false  # Backend might need to write logs
+    runAsNonRoot: true
+    runAsUser: 1001
+
+# Node placement
+frontend:
+  nodeSelector:
+    node-type: frontend
+  tolerations:
+    - key: "frontend-only"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - frontend
+            topologyKey: kubernetes.io/hostname
+
+backend:
+  nodeSelector:
+    node-type: backend
+  tolerations:
+    - key: "backend-only"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                    - backend
+            topologyKey: kubernetes.io/hostname

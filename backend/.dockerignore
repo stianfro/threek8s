@@ -1,20 +1,50 @@
+# Dependencies and build artifacts
 node_modules
-npm-debug.log
-dist
+dist/
+
+# Environment files (exclude all except .env.example)
 .env
 .env.local
 .env.*.local
+
+# Logs and temporary files
+logs/
+*.log
+npm-debug.log
+
+# Testing and coverage
+coverage/
+.nyc_output
+tests/
+
+# Version control
 .git
 .gitignore
-.vscode
-.idea
-*.log
-*.md
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
 .DS_Store
-coverage
-.nyc_output
-tests
+Thumbs.db
+
+# Documentation (not needed in runtime)
+*.md
+README*
+CHANGELOG*
+LICENSE*
+docs/
+
+# Configuration files (only needed during development)
 .eslintrc*
 .prettierrc*
+jest.config.*
+vitest.config.*
+
+# Docker-related files (not needed in image)
 Dockerfile
 .dockerignore
