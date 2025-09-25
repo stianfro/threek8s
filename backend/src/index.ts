@@ -23,9 +23,18 @@ async function startServer() {
 
     // Initialize Kubernetes configuration
     const kubeConfig = new KubeConfig();
-    if (KUBECONFIG_PATH) {
+
+    // Check if running in-cluster (presence of service account token)
+    const inCluster = process.env.KUBERNETES_SERVICE_HOST !== undefined;
+
+    if (inCluster) {
+      console.log('Detected in-cluster environment, using service account');
+      kubeConfig.loadFromCluster();
+    } else if (KUBECONFIG_PATH) {
+      console.log(`Loading kubeconfig from: ${KUBECONFIG_PATH}`);
       kubeConfig.loadFromFile(KUBECONFIG_PATH.replace('~', process.env.HOME || ''));
     } else {
+      console.log('Loading kubeconfig from default location');
       kubeConfig.loadFromDefault();
     }
 

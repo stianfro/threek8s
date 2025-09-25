@@ -42,35 +42,30 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Create environment variable substitution script for runtime config injection
-COPY <<EOF /docker-entrypoint.d/30-envsubst-on-templates.sh
+COPY <<'EOF' /docker-entrypoint.d/30-envsubst-on-templates.sh
 #!/bin/sh
 set -e
 
 # Replace environment variables in built files
-find /usr/share/nginx/html -name "*.js" -exec sed -i "s|VITE_API_URL_PLACEHOLDER|\${VITE_API_URL:-http://localhost:3001/api}|g" {} \;
-find /usr/share/nginx/html -name "*.js" -exec sed -i "s|VITE_WS_URL_PLACEHOLDER|\${VITE_WS_URL:-ws://localhost:3001/ws}|g" {} \;
+find /usr/share/nginx/html -name "*.js" -exec sed -i "s|VITE_API_URL_PLACEHOLDER|${VITE_API_URL:-http://localhost:3001/api}|g" {} \;
+find /usr/share/nginx/html -name "*.js" -exec sed -i "s|VITE_WS_URL_PLACEHOLDER|${VITE_WS_URL:-ws://localhost:3001/ws}|g" {} \;
 
 echo "Environment variables injected successfully"
 EOF
 
 RUN chmod +x /docker-entrypoint.d/30-envsubst-on-templates.sh
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nginx-user && \
-    adduser -S nginx-user -u 1001 -G nginx-user && \
-    # Set ownership for nginx directories
-    chown -R nginx-user:nginx-user /usr/share/nginx/html && \
-    chown -R nginx-user:nginx-user /var/cache/nginx && \
-    chown -R nginx-user:nginx-user /var/log/nginx && \
-    chown -R nginx-user:nginx-user /etc/nginx && \
-    # Create pid file with correct ownership
+# Prepare for running as non-root (OpenShift compatible)
+# Make nginx directories writable by root group
+RUN chgrp -R 0 /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx /var/run /docker-entrypoint.d && \
+    chmod -R g+rwX /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx /var/run /docker-entrypoint.d && \
+    # Create nginx.pid file
     touch /var/run/nginx.pid && \
-    chown nginx-user:nginx-user /var/run/nginx.pid && \
-    # Make entrypoint directory accessible
-    chown -R nginx-user:nginx-user /docker-entrypoint.d
+    chgrp 0 /var/run/nginx.pid && \
+    chmod g+rw /var/run/nginx.pid
 
-# Switch to non-root user
-USER nginx-user
+# Run as UID 1001 (but OpenShift will override this)
+USER 1001
 
 # Environment variables for runtime configuration
 ENV VITE_API_URL=http://localhost:3001/api

@@ -24,15 +24,23 @@ export class KubernetesService extends EventEmitter {
   }
 
   private loadKubeConfig(kubeconfigPath?: string): void {
-    if (kubeconfigPath) {
+    // Check if running in-cluster
+    const inCluster = process.env.KUBERNETES_SERVICE_HOST !== undefined;
+
+    if (inCluster) {
+      console.log('KubernetesService: Loading in-cluster config');
+      this.kubeConfig.loadFromCluster();
+    } else if (kubeconfigPath) {
       const resolvedPath = kubeconfigPath.replace('~', os.homedir());
-      if (fs.existsSync(resolvedPath)) {
+      if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
+        console.log(`KubernetesService: Loading config from file: ${resolvedPath}`);
         this.kubeConfig.loadFromFile(resolvedPath);
       } else {
-        throw new Error(`Kubeconfig file not found at: ${resolvedPath}`);
+        throw new Error(`Kubeconfig file not found or is not a file: ${resolvedPath}`);
       }
     } else {
       // Try to load from default location
+      console.log('KubernetesService: Loading config from default location');
       this.kubeConfig.loadFromDefault();
     }
   }

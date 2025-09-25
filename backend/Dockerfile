@@ -44,16 +44,16 @@ RUN npm ci --omit=dev && \
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 -G nodejs
+# Create directory for logs
+RUN mkdir -p /app/logs
 
-# Create directory for logs and ensure proper ownership
-RUN mkdir -p /app/logs && \
-    chown -R nodejs:nodejs /app
+# Prepare for running as non-root (OpenShift compatible)
+# Make app directories writable by root group
+RUN chgrp -R 0 /app && \
+    chmod -R g+rwX /app
 
-# Switch to non-root user
-USER nodejs
+# Run as UID 1001 (but OpenShift will override this)
+USER 1001
 
 # Set environment variables
 ENV NODE_ENV=production
