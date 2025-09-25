@@ -65,7 +65,7 @@ export class SceneManager {
   private setupScene(): void {
     // Set background
     this.scene.background = new THREE.Color(0x0a0a0a);
-    this.scene.fog = new THREE.Fog(0x0a0a0a, 50, 200);
+    // Fog removed to fix visibility issues at large zoom distances
 
     // Add ambient light
     const ambientLight = new THREE.AmbientLight(0x404040, 0.5);

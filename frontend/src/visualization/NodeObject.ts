@@ -1,32 +1,26 @@
 import * as THREE from 'three';
 import type { KubernetesNode } from '../types/kubernetes';
+import { GeometryPool } from './GeometryPool';
 
 export class NodeObject extends THREE.Group {
   private node: KubernetesNode;
   private mesh: THREE.Mesh;
   private outline: THREE.Mesh;
+  private edges: THREE.LineSegments;
   private labelSprite?: THREE.Sprite;
   private selected: boolean = false;
+  private geometryPool: GeometryPool;
 
-  constructor(node: KubernetesNode) {
+  constructor(node: KubernetesNode, geometryPool?: GeometryPool) {
     super();
     this.node = node;
-
-    // Flat square for 2D view
-    const size = 20;
-    const thickness = 0.1; // Even thinner for flatter 2D appearance
-
-    const geometry = new THREE.BoxGeometry(size, thickness, size);
+    this.geometryPool = geometryPool || GeometryPool.getInstance();
 
     const color = this.getNodeColor();
-    // More transparent material to see pods inside
-    const material = new THREE.MeshPhongMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.3,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
+
+    // Use pooled resources
+    const geometry = this.geometryPool.getNodeGeometry();
+    const material = this.geometryPool.getNodeMaterial(color);
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.castShadow = true;
@@ -44,19 +38,13 @@ export class NodeObject extends THREE.Group {
       transparent: true,
       opacity: 0.8
     });
-    const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+    this.edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
     // Make edges ignore raycasting too
-    edges.raycast = () => {};
-    this.add(edges);
+    this.edges.raycast = () => {};
+    this.add(this.edges);
 
-    const outlineGeometry = new THREE.BoxGeometry(size + 0.2, thickness + 0.1, size + 0.2);
-    const outlineMaterial = new THREE.MeshBasicMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.1,
-      side: THREE.BackSide,
-      depthWrite: false
-    });
+    const outlineGeometry = this.geometryPool.getNodeOutlineGeometry();
+    const outlineMaterial = this.geometryPool.getNodeOutlineMaterial(color);
     this.outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
     // Make outline ignore raycasting
     this.outline.raycast = () => {};
@@ -224,16 +212,30 @@ export class NodeObject extends THREE.Group {
   }
 
   public dispose(): void {
-    if (this.mesh.geometry) this.mesh.geometry.dispose();
-    if (this.mesh.material instanceof THREE.Material) this.mesh.material.dispose();
+    // Release materials back to pool
+    if (this.mesh.material instanceof THREE.Material) {
+      this.geometryPool.releaseMaterial(this.mesh.material);
+    }
 
-    if (this.outline.geometry) this.outline.geometry.dispose();
-    if (this.outline.material instanceof THREE.Material) this.outline.material.dispose();
+    if (this.outline.material instanceof THREE.Material) {
+      this.geometryPool.releaseMaterial(this.outline.material);
+    }
 
+    // Dispose edges geometry and material (not pooled)
+    if (this.edges) {
+      if (this.edges.geometry) this.edges.geometry.dispose();
+      if (this.edges.material instanceof THREE.Material) {
+        this.edges.material.dispose();
+      }
+    }
+
+    // Dispose label sprite if it exists
     if (this.labelSprite) {
       if (this.labelSprite.material instanceof THREE.Material) {
         this.labelSprite.material.dispose();
       }
     }
+
+    // Don't dispose pooled geometries
   }
 }

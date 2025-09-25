@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Pod } from '../types/kubernetes';
+import { GeometryPool } from './GeometryPool';
 
 export class PodObject extends THREE.Group {
   private pod: Pod;
@@ -9,39 +10,58 @@ export class PodObject extends THREE.Group {
   private targetPosition: THREE.Vector3 = new THREE.Vector3();
   private targetScale: number = 1;
   private baseSize: number = 0.8;
+  private geometryPool: GeometryPool | null;
 
-  constructor(pod: Pod, initialSize?: number) {
+  constructor(pod: Pod, initialSize?: number, geometryPool?: GeometryPool) {
     super();
     this.pod = pod;
+    this.geometryPool = geometryPool || null;
 
     const size = initialSize || this.baseSize;
     this.baseSize = size;
-    // Make pods flatter for 2D view - width and depth are size, height is reduced
-    const geometry = new THREE.BoxGeometry(size, size * 0.3, size);
 
     const color = this.getPodColor();
-    const material = new THREE.MeshPhongMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.95,
-      emissive: color,
-      emissiveIntensity: 0.2
-    });
 
-    this.mesh = new THREE.Mesh(geometry, material);
-    this.mesh.castShadow = true;
-    this.mesh.receiveShadow = true;
-    this.add(this.mesh);
+    // Use pooled resources if available
+    if (this.geometryPool) {
+      const geometry = this.geometryPool.getPodGeometry();
+      const material = this.geometryPool.getPodMaterial(color);
 
-    const outlineGeometry = new THREE.BoxGeometry(size + 0.05, size * 0.3 + 0.05, size + 0.05);
-    const outlineMaterial = new THREE.MeshBasicMaterial({
-      color: color,
-      transparent: true,
-      opacity: 0.2,
-      side: THREE.BackSide
-    });
-    this.outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
-    this.add(this.outline);
+      this.mesh = new THREE.Mesh(geometry, material);
+      this.mesh.castShadow = true;
+      this.mesh.receiveShadow = true;
+      this.add(this.mesh);
+
+      const outlineGeometry = this.geometryPool.getPodOutlineGeometry();
+      const outlineMaterial = this.geometryPool.getPodOutlineMaterial(color);
+      this.outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+      this.add(this.outline);
+    } else {
+      // Fallback to creating new geometries/materials
+      const geometry = new THREE.BoxGeometry(size, size * 0.3, size);
+      const material = new THREE.MeshPhongMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.95,
+        emissive: color,
+        emissiveIntensity: 0.2
+      });
+
+      this.mesh = new THREE.Mesh(geometry, material);
+      this.mesh.castShadow = true;
+      this.mesh.receiveShadow = true;
+      this.add(this.mesh);
+
+      const outlineGeometry = new THREE.BoxGeometry(size + 0.05, size * 0.3 + 0.05, size + 0.05);
+      const outlineMaterial = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.BackSide
+      });
+      this.outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+      this.add(this.outline);
+    }
 
     this.userData = {
       type: 'pod',
@@ -182,10 +202,22 @@ export class PodObject extends THREE.Group {
   }
 
   public dispose(): void {
-    if (this.mesh.geometry) this.mesh.geometry.dispose();
-    if (this.mesh.material instanceof THREE.Material) this.mesh.material.dispose();
+    // Release materials to pool if using pooled resources
+    if (this.geometryPool) {
+      if (this.mesh.material instanceof THREE.Material) {
+        this.geometryPool.releaseMaterial(this.mesh.material);
+      }
+      if (this.outline.material instanceof THREE.Material) {
+        this.geometryPool.releaseMaterial(this.outline.material);
+      }
+      // Don't dispose pooled geometries
+    } else {
+      // Dispose individual resources if not pooled
+      if (this.mesh.geometry) this.mesh.geometry.dispose();
+      if (this.mesh.material instanceof THREE.Material) this.mesh.material.dispose();
 
-    if (this.outline.geometry) this.outline.geometry.dispose();
-    if (this.outline.material instanceof THREE.Material) this.outline.material.dispose();
+      if (this.outline.geometry) this.outline.geometry.dispose();
+      if (this.outline.material instanceof THREE.Material) this.outline.material.dispose();
+    }
   }
 }
