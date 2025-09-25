@@ -14,7 +14,7 @@ export class NodeObject extends THREE.Group {
 
     // Flat square for 2D view
     const size = 20;
-    const thickness = 0.5; // Very thin for flat appearance
+    const thickness = 0.1; // Even thinner for flatter 2D appearance
 
     const geometry = new THREE.BoxGeometry(size, thickness, size);
 
@@ -122,12 +122,72 @@ export class NodeObject extends THREE.Group {
     return position;
   }
 
-  public getPodSlotInfo(index: number, totalPods: number): { position: THREE.Vector3, size: number } {
-    // Calculate grid dimensions based on node size
-    const nodeSize = 20;
-    const nodeHeight = 0.5;
-    const margin = 1; // Small margin from edge
-    const availableSpace = nodeSize - (2 * margin);
+  public getPodSlotInfoWorldSpace(index: number, totalPods: number): { position: THREE.Vector3, size: number } {
+    // Calculate pod positions in world space directly
+    // This accounts for the node's current position and scale
+
+    const baseNodeSize = 20;
+    const actualNodeSize = baseNodeSize * this.scale.x; // Get actual world size
+    const nodeHeight = 0.1 * this.scale.x; // Match the flatter node thickness
+
+    // Simple margin calculation
+    const margin = 2.0 * this.scale.x; // Margin from node edges
+    const availableSpace = actualNodeSize - (2 * margin);
+
+    // Calculate optimal grid layout
+    const cols = Math.ceil(Math.sqrt(totalPods));
+    const rows = Math.ceil(totalPods / cols);
+
+    // Simple pod size calculation - fill available space
+    const cellWidth = availableSpace / cols;
+    const cellHeight = availableSpace / rows;
+    const cellSize = Math.min(cellWidth, cellHeight);
+
+    // Pod size is 85% of cell size to leave gaps
+    let podSize = cellSize * 0.85;
+
+    // Apply min/max constraints based on scale
+    const maxPodSize = 2.5 * this.scale.x;
+    const minPodSize = 0.1 * this.scale.x;
+    podSize = Math.max(minPodSize, Math.min(maxPodSize, podSize));
+
+    // Calculate position for this specific pod
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+
+    // Simple grid positioning - start from top-left of available space
+    const startX = -availableSpace / 2;
+    const startZ = -availableSpace / 2;
+
+    // Position in center of each cell
+    const localX = startX + cellWidth * (col + 0.5);
+    const localZ = startZ + cellHeight * (row + 0.5);
+
+    // Place pods directly on top of the flat node surface
+    // Pod height is 0.3 * podSize (flatter pods)
+    const podHeight = podSize * 0.3;
+    const localY = nodeHeight / 2 + podHeight / 2; // Position based on actual pod height
+
+    // Add node's world position to get final world position
+    const worldPosition = new THREE.Vector3(
+      this.position.x + localX,
+      this.position.y + localY,
+      this.position.z + localZ
+    );
+
+    return {
+      position: worldPosition,
+      size: podSize
+    };
+  }
+
+  public getPodSlotInfo(index: number, totalPods: number, nodeScale: number = 1): { position: THREE.Vector3, size: number } {
+    // Keep the old method for backwards compatibility
+    // Calculate grid dimensions based on BASE node size (geometry size)
+    const baseNodeSize = 20;
+    const nodeHeight = 0.1; // Match the flatter node thickness
+    const margin = 1; // Margin in local space
+    const availableSpace = baseNodeSize - (2 * margin);
 
     // Calculate optimal grid layout
     const cols = Math.ceil(Math.sqrt(totalPods));
@@ -150,14 +210,16 @@ export class NodeObject extends THREE.Group {
     const col = index % cols;
     const row = Math.floor(index / cols);
 
-    // Position pods to fill the entire node area
+    // Position pods to fill the entire node area (in local node space)
     const x = -availableSpace/2 + spacingX/2 + col * spacingX;
-    const y = nodeHeight / 2 + actualPodSize / 2 + 0.5; // Place pods slightly above node surface
+    // Pod height is 0.3 * actualPodSize (flatter pods)
+    const podHeight = actualPodSize * 0.3;
+    const y = nodeHeight / 2 + podHeight / 2; // Place pods directly on node surface
     const z = -availableSpace/2 + spacingZ/2 + row * spacingZ;
 
     return {
       position: new THREE.Vector3(x, y, z),
-      size: actualPodSize
+      size: actualPodSize * nodeScale // Scale the pod size by the node's scale
     };
   }
 
