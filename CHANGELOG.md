@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/stianfro/threek8s/compare/v1.0.6...v1.1.0) (2025-09-25)
+
+
+### Features
+
+* implement runtime configuration for frontend ([8f5b4d4](https://github.com/stianfro/threek8s/commit/8f5b4d4b9cc71b3e9ae8d7744aa5de1b6fd03c1f))
+
+
+### Bug Fixes
+
+* make frontend OpenShift compatible by using port 8080 ([7a5599c](https://github.com/stianfro/threek8s/commit/7a5599c0650753374882b150e344b1d9f5d98b34))
+* reduce backend resource requirements and update default CORS ([bbbca09](https://github.com/stianfro/threek8s/commit/bbbca09b8228221c329058f0dbfc70887729f3fd))
+* remove incorrect KUBECONFIG_PATH env var and update docs ([b425dfd](https://github.com/stianfro/threek8s/commit/b425dfd68cc2b864886b639af7e5c77978549e5c))
+* significantly reduce resource requests and remove limits ([e70eb7f](https://github.com/stianfro/threek8s/commit/e70eb7f99b0f2360c8c8b63b5c92ee3695b58dcb))
+
 ## [1.0.6](https://github.com/stianfro/threek8s/compare/v1.0.5...v1.0.6) (2025-09-25)
 
 
