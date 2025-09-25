@@ -62,7 +62,7 @@ export function createPodsRouter(stateManager: StateManager): Router {
 
       res.json(pod);
     } catch (error) {
-      console.error(`Failed to get pod ${req.params.podName}:`, error);
+      console.error('Failed to get pod %s:', req.params.podName, error);
       res.status(500).json({
         error: 'INTERNAL_ERROR',
         message: 'Failed to retrieve pod details',
