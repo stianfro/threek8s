@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/stianfro/threek8s/compare/v1.1.1...v1.1.2) (2025-09-25)
+
+
+### Bug Fixes
+
+* correct Helm chart OCI registry path and versioning ([#15](https://github.com/stianfro/threek8s/issues/15)) ([5a63236](https://github.com/stianfro/threek8s/commit/5a63236753aa2170b42d4081ac8232809cf16454))
+
 ## [1.1.1](https://github.com/stianfro/threek8s/compare/v1.1.0...v1.1.1) (2025-09-25)
 
 
