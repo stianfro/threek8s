@@ -16,7 +16,8 @@ export class PodObject extends THREE.Group {
 
     const size = initialSize || this.baseSize;
     this.baseSize = size;
-    const geometry = new THREE.BoxGeometry(size, size, size);
+    // Make pods flatter for 2D view - width and depth are size, height is reduced
+    const geometry = new THREE.BoxGeometry(size, size * 0.3, size);
 
     const color = this.getPodColor();
     const material = new THREE.MeshPhongMaterial({
@@ -32,7 +33,7 @@ export class PodObject extends THREE.Group {
     this.mesh.receiveShadow = true;
     this.add(this.mesh);
 
-    const outlineGeometry = new THREE.BoxGeometry(size + 0.05, size + 0.05, size + 0.05);
+    const outlineGeometry = new THREE.BoxGeometry(size + 0.05, size * 0.3 + 0.05, size + 0.05);
     const outlineMaterial = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,

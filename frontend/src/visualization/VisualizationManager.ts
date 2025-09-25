@@ -12,6 +12,8 @@ export class VisualizationManager {
   private nodeGroup: THREE.Group;
   private podGroup: THREE.Group;
   private lastUpdateTime: number = Date.now();
+  private isInitialized: boolean = false;
+  private lastLayout: { positions: THREE.Vector3[], scale: number } | null = null;
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -23,6 +25,53 @@ export class VisualizationManager {
     this.podGroup = new THREE.Group();
     this.podGroup.name = 'pods';
     this.sceneManager.addObject(this.podGroup);
+
+    // Add resize handler for dynamic viewport updates
+    window.addEventListener('resize', this.handleResize.bind(this));
+  }
+
+  private handleResize = (): void => {
+    // Skip resize handling during initial setup to prevent double animations
+    if (!this.isInitialized) {
+      return;
+    }
+
+    // Recalculate layout and update all nodes
+    if (this.nodes.size > 0) {
+      const nodeCount = this.nodes.size;
+      const layout = this.calculateLayout(nodeCount);
+
+      // Only animate if layout actually changed significantly
+      if (this.hasLayoutChanged(layout)) {
+        // Update node positions using the same layout calculation
+        let index = 0;
+        this.nodes.forEach((node) => {
+          this.animateNodePosition(node, layout.positions[index]);
+          this.animateNodeScale(node, layout.scale);
+          index++;
+        });
+
+        this.lastLayout = layout;
+        this.adjustCameraForContent();
+      }
+    }
+  }
+
+  private hasLayoutChanged(newLayout: { positions: THREE.Vector3[], scale: number }): boolean {
+    if (!this.lastLayout) return true;
+
+    // Check if scale changed significantly
+    if (Math.abs(this.lastLayout.scale - newLayout.scale) > 0.01) return true;
+
+    // Check if any position changed significantly
+    for (let i = 0; i < newLayout.positions.length; i++) {
+      if (!this.lastLayout.positions[i]) return true;
+      if (this.lastLayout.positions[i].distanceTo(newLayout.positions[i]) > 0.1) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public updateState(state: ClusterState): void {
@@ -37,8 +86,12 @@ export class VisualizationManager {
   private updateNodes(nodes: KubernetesNode[]): void {
     const currentNodeIds = new Set(nodes.map(n => n.uid));
 
-    // Reset node scale for recalculation
-    this.nodeScale = 1;
+    // Calculate the complete layout first
+    const layout = this.calculateLayout(nodes.length);
+    this.lastLayout = layout;
+
+    // Track if this is initial setup
+    const isInitialSetup = this.nodes.size === 0;
 
     nodes.forEach((nodeData, index) => {
       let node = this.nodes.get(nodeData.uid);
@@ -50,13 +103,28 @@ export class VisualizationManager {
         this.nodesByName.set(nodeData.name, node);
         this.nodeGroup.add(node);
 
-        const position = this.calculateNodePosition(index, nodes.length);
-        node.position.copy(position);
+        // Set the final position and scale immediately
+        node.position.copy(layout.positions[index]);
+        node.scale.setScalar(layout.scale);
 
-        node.scale.set(0, 0, 0);
-        this.animateNodeCreation(node);
+        // Only animate if not initial setup
+        if (!isInitialSetup) {
+          // For new nodes after initial setup, start from scale 0
+          node.scale.set(0, 0, 0);
+          this.animateNodeCreation(node, layout.scale);
+        }
       } else {
         node.updateNode(nodeData);
+        // Only animate if not initial setup
+        if (!isInitialSetup) {
+          // Update existing node position and scale with animation
+          this.animateNodePosition(node, layout.positions[index]);
+          this.animateNodeScale(node, layout.scale);
+        } else {
+          // Initial setup - set positions immediately without animation
+          node.position.copy(layout.positions[index]);
+          node.scale.setScalar(layout.scale);
+        }
       }
     });
 
@@ -67,7 +135,15 @@ export class VisualizationManager {
       }
     });
 
-    this.layoutNodes();
+    // Mark as initialized after first update
+    if (isInitialSetup && nodes.length > 0) {
+      // Use a small timeout to ensure DOM is ready before marking as initialized
+      setTimeout(() => {
+        this.isInitialized = true;
+      }, 100);
+    }
+
+    // Don't call layoutNodes here - we've already applied the layout
     this.adjustCameraForContent();
   }
 
@@ -96,7 +172,8 @@ export class VisualizationManager {
         if (node) {
           const nodePods = podsByNode.get(podData.nodeName) || [];
           const podIndex = nodePods.findIndex(p => p.uid === podData.uid);
-          const slotInfo = node.getPodSlotInfo(podIndex, nodePods.length);
+          // Use world space method to get proper positions
+          const slotInfo = node.getPodSlotInfoWorldSpace(podIndex, nodePods.length);
           initialSize = slotInfo.size;
         }
         pod = new PodObject(podData, initialSize);
@@ -111,9 +188,9 @@ export class VisualizationManager {
       if (node) {
         const nodePods = podsByNode.get(podData.nodeName) || [];
         const podIndex = nodePods.findIndex(p => p.uid === podData.uid);
-        const slotInfo = node.getPodSlotInfo(podIndex, nodePods.length);
-        const worldPosition = node.position.clone().add(slotInfo.position);
-        pod.setTargetPosition(worldPosition);
+        // Use world space method - position is already in world coordinates
+        const slotInfo = node.getPodSlotInfoWorldSpace(podIndex, nodePods.length);
+        pod.setTargetPosition(slotInfo.position);
         pod.setSize(slotInfo.size);
       }
     });
@@ -143,79 +220,112 @@ export class VisualizationManager {
     });
   }
 
-  private calculateNodePosition(index: number, total: number): THREE.Vector3 {
-    // Dynamic grid layout that scales with node count
-    // Calculate optimal grid dimensions based on aspect ratio
-    const aspectRatio = 16 / 9; // Typical screen aspect ratio
+  private calculateVisibleArea(): { width: number; height: number } {
+    const camera = this.sceneManager.getCamera();
+    const distance = camera.position.y; // Top-down view
+    const vFov = (camera.fov * Math.PI) / 180;
+    const height = 2 * Math.tan(vFov / 2) * distance;
+    const width = height * camera.aspect;
+    return { width: width * 0.8, height: height * 0.8 }; // Use 80% of visible area for margins
+  }
 
-    // Calculate grid dimensions
-    let cols = Math.ceil(Math.sqrt(total * aspectRatio));
-    let rows = Math.ceil(total / cols);
 
-    // Ensure at least 2 columns for better layout
-    if (cols < 2 && total > 1) cols = 2;
+  private calculateLayout(nodeCount: number): { positions: THREE.Vector3[], scale: number } {
+    // Get actual visible viewport area
+    const viewport = this.calculateVisibleArea();
+    const aspectRatio = viewport.width / viewport.height;
 
-    // Calculate dynamic spacing based on viewport constraints
-    const maxViewportWidth = 80;  // Maximum width to use
-    const maxViewportHeight = 45;  // Maximum height to use
+    // Calculate optimal grid dimensions
+    let cols = Math.ceil(Math.sqrt(nodeCount * aspectRatio));
+    let rows = Math.ceil(nodeCount / cols);
 
-    // Base node size (will be scaled down if needed)
-    const baseNodeSize = 20;
-    const minSpacing = 2; // Minimum spacing between nodes
+    // Ensure at least 2 columns for better layout when we have multiple nodes
+    if (cols < 2 && nodeCount > 1) cols = 2;
 
-    // Calculate spacing to fit all nodes in viewport
-    const requiredWidth = cols * baseNodeSize + (cols - 1) * minSpacing;
-    const requiredHeight = rows * baseNodeSize + (rows - 1) * minSpacing;
+    // Adaptive node sizing based on cluster size
+    const baseNodeSize = 20; // This matches the actual geometry size in NodeObject
 
-    // Calculate scale factor if content exceeds viewport
-    const scaleX = requiredWidth > maxViewportWidth ? maxViewportWidth / requiredWidth : 1;
-    const scaleZ = requiredHeight > maxViewportHeight ? maxViewportHeight / requiredHeight : 1;
-    const scale = Math.min(scaleX, scaleZ);
+    // Dynamic size constraints based on node count
+    let minNodeSize: number;
+    let maxNodeSize: number;
+    let spacingFactor: number;
 
-    // Apply scaling
-    const nodeSize = baseNodeSize * scale;
-    const spacing = nodeSize + minSpacing * scale;
-
-    // Calculate position
-    const row = Math.floor(index / cols);
-    const col = index % cols;
-
-    // Center the layout
-    const totalWidth = cols * nodeSize + (cols - 1) * minSpacing * scale;
-    const totalDepth = rows * nodeSize + (rows - 1) * minSpacing * scale;
-
-    const x = col * spacing - totalWidth / 2 + nodeSize / 2;
-    const z = row * spacing - totalDepth / 2 + nodeSize / 2;
-    const y = 0; // Keep all nodes at ground level for 2D view
-
-    // Store the calculated scale for node sizing
-    if (!this.nodeScale) {
-      this.nodeScale = scale;
+    if (nodeCount <= 10) {
+      // Small clusters: larger nodes with more spacing
+      minNodeSize = 15;
+      maxNodeSize = 40;
+      spacingFactor = 0.20; // 20% spacing
+    } else if (nodeCount <= 50) {
+      // Medium clusters: moderate sizing
+      minNodeSize = 8;
+      maxNodeSize = 25;
+      spacingFactor = 0.15; // 15% spacing
+    } else if (nodeCount <= 200) {
+      // Large clusters: smaller nodes, tighter spacing
+      minNodeSize = 4;
+      maxNodeSize = 15;
+      spacingFactor = 0.10; // 10% spacing
+    } else {
+      // Very large clusters: minimum sizing for visibility
+      minNodeSize = 2;
+      maxNodeSize = 8;
+      spacingFactor = 0.05; // 5% spacing
     }
 
-    return new THREE.Vector3(x, y, z);
-  }
+    // Calculate optimal node size to fill viewport
+    const availableWidth = viewport.width / (cols * (1 + spacingFactor));
+    const availableHeight = viewport.height / (rows * (1 + spacingFactor));
 
-  private nodeScale: number = 1;
+    // Choose the smaller dimension to ensure everything fits
+    let nodeSize = Math.min(availableWidth, availableHeight);
 
-  private layoutNodes(): void {
-    const nodeArray = Array.from(this.nodes.values());
-    const total = nodeArray.length;
+    // Apply size constraints
+    nodeSize = Math.max(minNodeSize, Math.min(maxNodeSize, nodeSize));
 
-    // Recalculate positions with proper scaling
-    this.nodeScale = 1; // Reset before calculation
+    // Calculate actual spacing
+    const spacing = nodeSize * (1 + spacingFactor);
 
-    nodeArray.forEach((node, index) => {
-      const targetPosition = this.calculateNodePosition(index, total);
-      this.animateNodePosition(node, targetPosition);
+    // Calculate positions for all nodes
+    const positions: THREE.Vector3[] = [];
+    const gridWidth = cols * spacing - nodeSize * spacingFactor;
+    const gridHeight = rows * spacing - nodeSize * spacingFactor;
 
-      // Apply dynamic scaling to node
-      const targetScale = this.nodeScale;
-      this.animateNodeScale(node, targetScale);
+    for (let i = 0; i < nodeCount; i++) {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+
+      const x = col * spacing - gridWidth / 2 + nodeSize / 2;
+      const z = row * spacing - gridHeight / 2 + nodeSize / 2;
+      const y = 0; // Keep all nodes at ground level for 2D view
+
+      positions.push(new THREE.Vector3(x, y, z));
+    }
+
+    // Calculate scale relative to base geometry size
+    const scale = nodeSize / baseNodeSize;
+
+    console.log('[VisualizationManager] Layout calculated:', {
+      nodeCount,
+      cols,
+      rows,
+      nodeSize,
+      scale,
+      viewport,
+      gridWidth,
+      gridHeight
     });
+
+    return { positions, scale };
   }
+
+
 
   private animateNodeScale(node: NodeObject, targetScale: number): void {
+    // Skip animation if scale is already very close
+    if (Math.abs(node.scale.x - targetScale) < 0.01) {
+      return;
+    }
+
     const duration = 500;
     const startTime = Date.now();
     const startScale = node.scale.x;
@@ -228,12 +338,40 @@ export class VisualizationManager {
       const scale = startScale + (targetScale - startScale) * easedProgress;
       node.scale.setScalar(scale);
 
+      // Update pod positions during animation
+      this.updatePodsForNode(node);
+
       if (progress < 1) {
         requestAnimationFrame(animate);
+      } else {
+        // Ensure final scale is exact and pods are in final position
+        node.scale.setScalar(targetScale);
+        this.updatePodsForNode(node);
       }
     };
 
     animate();
+  }
+
+  private updatePodsForNode(node: NodeObject): void {
+    // Get all pods for this node
+    const podsForNode: Pod[] = [];
+    this.pods.forEach(pod => {
+      if (pod.getPod().nodeName === node.getNode().name) {
+        podsForNode.push(pod.getPod());
+      }
+    });
+
+    // Update positions for pods on this node using world space method
+    podsForNode.forEach((podData, index) => {
+      const pod = this.pods.get(podData.uid);
+      if (pod) {
+        // Use world space method directly - no transforms needed
+        const slotInfo = node.getPodSlotInfoWorldSpace(index, podsForNode.length);
+        pod.setTargetPosition(slotInfo.position);
+        pod.setSize(slotInfo.size);
+      }
+    });
   }
 
   private adjustCameraForContent(): void {
@@ -249,23 +387,45 @@ export class VisualizationManager {
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
 
-    // Adjust camera position to fit all content
+    // Calculate optimal camera distance to see all content with some padding
     const maxDimension = Math.max(size.x, size.z);
     const fov = this.sceneManager.getCamera().fov * (Math.PI / 180);
-    const cameraZ = Math.abs(maxDimension / 2 / Math.tan(fov / 2));
+    const optimalDistance = (maxDimension * 1.2) / (2 * Math.tan(fov / 2));
 
-    // Set camera to look at center and position it appropriately
-    const targetHeight = Math.max(100, cameraZ * 1.5); // Minimum 100 units up
-    this.sceneManager.getCamera().position.set(center.x, targetHeight, center.z + 0.001);
-    this.sceneManager.getCamera().lookAt(center.x, 0, center.z);
+    // Adaptive camera height based on node count
+    let minHeight: number;
+    let maxHeight: number;
 
-    // Update controls target
-    this.sceneManager.getControls().target.set(center.x, 0, center.z);
-    this.sceneManager.getControls().update();
+    if (nodeArray.length <= 10) {
+      minHeight = 50;
+      maxHeight = 150;
+    } else if (nodeArray.length <= 50) {
+      minHeight = 80;
+      maxHeight = 300;
+    } else {
+      // Large clusters need more distance
+      minHeight = 100;
+      maxHeight = 500;
+    }
+
+    const targetHeight = Math.max(minHeight, Math.min(maxHeight, optimalDistance));
+
+    // Smoothly adjust camera position
+    const camera = this.sceneManager.getCamera();
+    const currentHeight = camera.position.y;
+
+    // Only adjust if significantly different (avoid minor adjustments)
+    if (Math.abs(currentHeight - targetHeight) > 5) {
+      camera.position.set(center.x, targetHeight, center.z + 0.001);
+      camera.lookAt(center.x, 0, center.z);
+
+      // Update controls target
+      this.sceneManager.getControls().target.set(center.x, 0, center.z);
+      this.sceneManager.getControls().update();
+    }
   }
 
-  private animateNodeCreation(node: NodeObject): void {
-    const targetScale = 1;
+  private animateNodeCreation(node: NodeObject, targetScale: number = 1): void {
     const duration = 1000;
     const startTime = Date.now();
 
@@ -310,6 +470,11 @@ export class VisualizationManager {
   }
 
   private animateNodePosition(node: NodeObject, targetPosition: THREE.Vector3): void {
+    // Skip animation if positions are already very close
+    if (node.position.distanceTo(targetPosition) < 0.01) {
+      return;
+    }
+
     const duration = 2000;
     const startTime = Date.now();
     const startPosition = node.position.clone();
@@ -321,8 +486,15 @@ export class VisualizationManager {
 
       node.position.lerpVectors(startPosition, targetPosition, easedProgress);
 
+      // Update pod positions during node movement
+      this.updatePodsForNode(node);
+
       if (progress < 1) {
         requestAnimationFrame(animate);
+      } else {
+        // Ensure final position is exact and pods are in final position
+        node.position.copy(targetPosition);
+        this.updatePodsForNode(node);
       }
     };
 
@@ -504,6 +676,9 @@ export class VisualizationManager {
   }
 
   public dispose(): void {
+    // Remove event listeners
+    window.removeEventListener('resize', this.handleResize.bind(this));
+
     this.nodes.forEach(node => {
       this.nodeGroup.remove(node);
       node.dispose();

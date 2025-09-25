@@ -39,6 +39,27 @@ dev:
     @echo ""
     @just dev-simple
 
+# Run in mock mode with specified node and pod count
+dev-mock nodes="40" pods="7000":
+    @echo "🧪 Starting development servers in MOCK mode..."
+    @echo "📊 Mocking {{nodes}} nodes with {{pods}} pods"
+    @echo "Backend: http://localhost:3001"
+    @echo "Frontend: http://localhost:5173"
+    @echo "Press Ctrl+C to stop both servers"
+    @echo ""
+    @MOCK_MODE=true MOCK_NODE_COUNT={{nodes}} MOCK_POD_COUNT={{pods}} just dev-simple
+
+# Run in mock mode with dynamic updates
+dev-mock-dynamic nodes="5" pods="50" interval="3000":
+    @echo "🧪 Starting development servers in MOCK mode with dynamic updates..."
+    @echo "📊 Mocking {{nodes}} nodes with {{pods}} pods"
+    @echo "🔄 Dynamic updates every {{interval}}ms"
+    @echo "Backend: http://localhost:3001"
+    @echo "Frontend: http://localhost:5173"
+    @echo "Press Ctrl+C to stop both servers"
+    @echo ""
+    @MOCK_MODE=true MOCK_NODE_COUNT={{nodes}} MOCK_POD_COUNT={{pods}} MOCK_DYNAMIC_UPDATES=true MOCK_UPDATE_INTERVAL={{interval}} just dev-simple
+
 # Run development servers using tmux for split view
 dev-tmux:
     @echo "🚀 Starting development servers in tmux..."
