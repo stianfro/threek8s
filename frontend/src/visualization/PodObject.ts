@@ -161,10 +161,11 @@ export class PodObject extends THREE.Group {
 
     // Add a bright flash effect on creation
     if (this.mesh.material instanceof THREE.MeshPhongMaterial) {
-      const originalIntensity = this.mesh.material.emissiveIntensity;
-      this.mesh.material.emissiveIntensity = 1.0;
+      const material = this.mesh.material as THREE.MeshPhongMaterial;
+      const originalIntensity = (material as any).emissiveIntensity || 0;
+      (material as any).emissiveIntensity = 1.0;
       setTimeout(() => {
-        this.mesh.material.emissiveIntensity = originalIntensity;
+        (material as any).emissiveIntensity = originalIntensity;
       }, 300);
     }
   }

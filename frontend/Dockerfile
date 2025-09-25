@@ -20,13 +20,16 @@ RUN apk add --no-cache \
 # Copy package files first for better Docker layer caching
 COPY package*.json ./
 
-# Install dependencies with clean npm cache
-RUN npm ci --only=production --no-audit --no-fund && \
-    npm ci --only=development --no-audit --no-fund && \
+# Install ALL dependencies (both production and development) for building
+RUN npm ci --no-audit --no-fund && \
     npm cache clean --force
 
-# Copy source code
-COPY . .
+# Copy source code and other necessary files
+COPY tsconfig.json ./
+COPY vite.config.ts ./
+COPY index.html ./
+COPY public ./public/
+COPY src ./src/
 
 # Build the React/Three.js application
 RUN npm run build
