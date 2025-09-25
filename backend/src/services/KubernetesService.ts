@@ -5,7 +5,6 @@ import { Namespace } from '../models/Namespace';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
-import { MockDataService, MockConfig } from './MockDataService';
 
 export class KubernetesService extends EventEmitter {
   private kubeConfig: KubeConfig;
@@ -13,41 +12,15 @@ export class KubernetesService extends EventEmitter {
   private versionApi: VersionApi;
   private watch: Watch;
   private connected: boolean = false;
-  private mockService?: MockDataService;
-  private isMockMode: boolean = false;
 
   constructor(kubeconfigPath?: string) {
     super();
+    this.kubeConfig = new KubeConfig();
+    this.watch = new Watch(this.kubeConfig);
 
-    // Check if mock mode is enabled
-    this.isMockMode = process.env.MOCK_MODE === 'true';
-
-    if (this.isMockMode) {
-      // Initialize mock service
-      const mockConfig: MockConfig = {
-        nodeCount: parseInt(process.env.MOCK_NODE_COUNT || '5'),
-        podCount: parseInt(process.env.MOCK_POD_COUNT || '50'),
-        enableDynamicUpdates: process.env.MOCK_DYNAMIC_UPDATES === 'true',
-        updateInterval: parseInt(process.env.MOCK_UPDATE_INTERVAL || '5000')
-      };
-
-      console.log('[KubernetesService] Running in MOCK mode with config:', mockConfig);
-      this.mockService = new MockDataService(mockConfig);
-
-      // Forward mock service events
-      this.mockService.on('update', (state) => this.emit('stateUpdate', state));
-      this.mockService.on('podUpdate', (pod) => this.emit('podUpdate', pod));
-      this.mockService.on('nodeUpdate', (node) => this.emit('nodeUpdate', node));
-      this.mockService.on('podAdd', (pod) => this.emit('podAdd', pod));
-      this.mockService.on('podDelete', (pod) => this.emit('podDelete', pod));
-    } else {
-      this.kubeConfig = new KubeConfig();
-      this.watch = new Watch(this.kubeConfig);
-
-      this.loadKubeConfig(kubeconfigPath);
-      this.coreApi = this.kubeConfig.makeApiClient(CoreV1Api);
-      this.versionApi = this.kubeConfig.makeApiClient(VersionApi);
-    }
+    this.loadKubeConfig(kubeconfigPath);
+    this.coreApi = this.kubeConfig.makeApiClient(CoreV1Api);
+    this.versionApi = this.kubeConfig.makeApiClient(VersionApi);
   }
 
   private loadKubeConfig(kubeconfigPath?: string): void {
@@ -73,17 +46,6 @@ export class KubernetesService extends EventEmitter {
   }
 
   async connect(): Promise<void> {
-    if (this.isMockMode) {
-      // Mock mode is always "connected"
-      this.connected = true;
-      this.emit('connected', {
-        version: 'v1.30.5-mock',
-        platform: 'mock/test',
-      });
-      console.log('[KubernetesService] Connected to mock cluster');
-      return;
-    }
-
     try {
       // Test connection by getting version
       const version = await this.versionApi.getCode();
@@ -100,16 +62,6 @@ export class KubernetesService extends EventEmitter {
   }
 
   async getClusterInfo() {
-    if (this.isMockMode) {
-      return {
-        name: `mock-cluster (${process.env.MOCK_NODE_COUNT} nodes, ${process.env.MOCK_POD_COUNT} pods)`,
-        version: 'v1.30.5-mock',
-        apiServer: 'mock://localhost',
-        platform: 'mock/test',
-        connected: this.connected,
-      };
-    }
-
     const version = await this.versionApi.getCode();
     const versionData = (version as any).body || version;
     const currentContext = this.kubeConfig.getCurrentContext();
@@ -125,24 +77,12 @@ export class KubernetesService extends EventEmitter {
   }
 
   async getNodes(): Promise<KubernetesNode[]> {
-    if (this.isMockMode && this.mockService) {
-      return this.mockService.getNodes();
-    }
-
     const response = await this.coreApi.listNode();
     const nodes = (response as any).body || response;
     return nodes.items.map((node: any) => this.transformNode(node));
   }
 
   async getPods(namespace?: string): Promise<Pod[]> {
-    if (this.isMockMode && this.mockService) {
-      const allPods = this.mockService.getPods();
-      if (namespace) {
-        return allPods.filter(pod => pod.namespace === namespace);
-      }
-      return allPods;
-    }
-
     let response;
     if (namespace) {
       response = await this.coreApi.listNamespacedPod({ namespace } as any);
@@ -154,16 +94,6 @@ export class KubernetesService extends EventEmitter {
   }
 
   async getNamespaces(): Promise<Namespace[]> {
-    if (this.isMockMode && this.mockService) {
-      const state = this.mockService.getState();
-      return state.namespaces.map(ns => ({
-        name: ns,
-        uid: `ns-${ns}`,
-        status: 'Active',
-        createdAt: new Date().toISOString()
-      }));
-    }
-
     const response = await this.coreApi.listNamespace();
     const nsData = (response as any).body || response;
     const namespaces = nsData.items.map((ns: any) => this.transformNamespace(ns));

@@ -88,7 +88,6 @@ export class VisualizationManager {
 
     // Calculate the complete layout first
     const layout = this.calculateLayout(nodes.length);
-    this.nodeScale = layout.scale;
     this.lastLayout = layout;
 
     // Track if this is initial setup
@@ -230,58 +229,6 @@ export class VisualizationManager {
     return { width: width * 0.8, height: height * 0.8 }; // Use 80% of visible area for margins
   }
 
-  private _calculateNodePosition(index: number, total: number): THREE.Vector3 {
-    // Get actual visible viewport area
-    const viewport = this.calculateVisibleArea();
-    const aspectRatio = viewport.width / viewport.height;
-
-    // Calculate optimal grid dimensions
-    let cols = Math.ceil(Math.sqrt(total * aspectRatio));
-    let rows = Math.ceil(total / cols);
-
-    // Ensure at least 2 columns for better layout when we have multiple nodes
-    if (cols < 2 && total > 1) cols = 2;
-
-    // Node sizing with better constraints
-    const minNodeSize = 10;  // Minimum node size for visibility
-    const maxNodeSize = 40;  // Maximum node size to prevent oversizing
-    const baseNodeSize = 20; // Preferred node size
-
-    // Calculate spacing based on viewport
-    const spacingFactor = 0.15; // 15% spacing between nodes
-
-    // Calculate optimal node size to fill viewport
-    const availableWidth = viewport.width / (cols * (1 + spacingFactor));
-    const availableHeight = viewport.height / (rows * (1 + spacingFactor));
-
-    // Choose the smaller dimension to ensure everything fits
-    let nodeSize = Math.min(availableWidth, availableHeight);
-
-    // Apply size constraints
-    nodeSize = Math.max(minNodeSize, Math.min(maxNodeSize, nodeSize));
-
-    // Calculate actual spacing
-    const spacing = nodeSize * (1 + spacingFactor);
-
-    // Calculate position
-    const row = Math.floor(index / cols);
-    const col = index % cols;
-
-    // Center the grid in viewport
-    const gridWidth = cols * spacing - nodeSize * spacingFactor;
-    const gridHeight = rows * spacing - nodeSize * spacingFactor;
-
-    const x = col * spacing - gridWidth / 2 + nodeSize / 2;
-    const z = row * spacing - gridHeight / 2 + nodeSize / 2;
-    const y = 0; // Keep all nodes at ground level for 2D view
-
-    // Store the scale relative to base size for node sizing
-    this._nodeScale = nodeSize / baseNodeSize;
-
-    return new THREE.Vector3(x, y, z);
-  }
-
-  private _nodeScale: number = 1;
 
   private calculateLayout(nodeCount: number): { positions: THREE.Vector3[], scale: number } {
     // Get actual visible viewport area
@@ -372,30 +319,6 @@ export class VisualizationManager {
   }
 
 
-  private _updatePodPositionsAfterNodeScale(): void {
-    // Group pods by node
-    const podsByNode = new Map<string, Pod[]>();
-    this.pods.forEach(pod => {
-      const podData = pod.getPod();
-      const nodePods = podsByNode.get(podData.nodeName) || [];
-      nodePods.push(podData);
-      podsByNode.set(podData.nodeName, nodePods);
-    });
-
-    // Update each pod's position and size based on its node's scale
-    this.pods.forEach(pod => {
-      const podData = pod.getPod();
-      const node = this.nodesByName.get(podData.nodeName);
-      if (node) {
-        const nodePods = podsByNode.get(podData.nodeName) || [];
-        const podIndex = nodePods.findIndex(p => p.uid === podData.uid);
-        // Use world space method
-        const slotInfo = node.getPodSlotInfoWorldSpace(podIndex, nodePods.length);
-        pod.setTargetPosition(slotInfo.position);
-        pod.setSize(slotInfo.size);
-      }
-    });
-  }
 
   private animateNodeScale(node: NodeObject, targetScale: number): void {
     // Skip animation if scale is already very close
