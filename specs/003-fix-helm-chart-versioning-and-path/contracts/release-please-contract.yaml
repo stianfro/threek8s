@@ -1,0 +1,114 @@
+# Release Please Contract: Chart Version Management
+# Validates release-please configuration for Helm chart updates
+
+name: Release Please Chart Integration Contract
+version: 1.0.0
+
+configuration_requirements:
+  file: "release-please-config.json"
+  schema_version: "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+
+packages:
+  root:
+    path: "."
+    release_type: "simple"
+    required_settings:
+      - include-component-in-tag: false
+      - include-v-in-tag: true
+      - bump-minor-pre-major: true
+
+extra_files:
+  helm_chart_version:
+    required: true
+    config:
+      type: "yaml"
+      path: "helm/threek8s/Chart.yaml"
+      jsonpath: "$.version"
+    validation:
+      - "Must update on every release"
+      - "Must match release tag version (without 'v' prefix)"
+
+  helm_chart_app_version:
+    required: true
+    config:
+      type: "yaml"
+      path: "helm/threek8s/Chart.yaml"
+      jsonpath: "$.appVersion"
+    validation:
+      - "Must update on every release"
+      - "Must match application version"
+
+  backend_package:
+    required: true
+    config:
+      type: "json"
+      path: "backend/package.json"
+      jsonpath: "$.version"
+
+  frontend_package:
+    required: true
+    config:
+      type: "json"
+      path: "frontend/package.json"
+      jsonpath: "$.version"
+
+version_behavior:
+  pattern: "X.Y.Z"
+  tag_format: "v{version}"
+
+  chart_specific_tags:
+    enabled: true
+    pattern: "chart-v{version}"
+    purpose: "Emergency chart-only fixes"
+
+pull_request_updates:
+  expected_files:
+    - path: "helm/threek8s/Chart.yaml"
+      changes:
+        - "version: {new_version}"
+        - "appVersion: {new_version}"
+    - path: "backend/package.json"
+      changes:
+        - '"version": "{new_version}"'
+    - path: "frontend/package.json"
+      changes:
+        - '"version": "{new_version}"'
+    - path: "CHANGELOG.md"
+      changes:
+        - "New version entry"
+
+release_process:
+  steps:
+    1: "Detect conventional commits"
+    2: "Calculate next version"
+    3: "Create/update release PR"
+    4: "Update all extra-files"
+    5: "On merge: create GitHub release"
+    6: "On release: trigger publish-helm workflow"
+
+validation_checks:
+  pre_merge:
+    - "All version fields updated consistently"
+    - "Chart.yaml version is valid semver"
+    - "CHANGELOG.md updated"
+
+  post_release:
+    - "GitHub release created with correct tag"
+    - "publish-helm workflow triggered"
+    - "Chart published to registry"
+
+error_scenarios:
+  - id: "chart_not_updated"
+    symptom: "Chart.yaml version unchanged in release PR"
+    cause: "Missing or incorrect extra-files configuration"
+    fix: "Verify jsonpath expressions in release-please-config.json"
+
+  - id: "version_mismatch"
+    symptom: "Chart version differs from release version"
+    cause: "Manual edit or failed update"
+    fix: "Ensure release-please is sole version manager"
+
+  - id: "workflow_not_triggered"
+    symptom: "Chart not published after release"
+    cause: "Workflow trigger configuration issue"
+    fix: "Verify workflow listens to release events"
