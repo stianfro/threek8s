@@ -3,7 +3,9 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org)
 [![Three.js](https://img.shields.io/badge/Three.js-Latest-orange)](https://threejs.org)
-[![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue)](https://github.com/stianfro/threek8s/pkgs)
+[![Helm](https://img.shields.io/badge/Helm-v1.0.0-purple)](https://github.com/stianfro/threek8s/pkgs)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 A real-time 3D visualization tool for Kubernetes clusters using Three.js. Watch your nodes and pods come to life in an interactive 3D space with smooth animations and live updates.
 
@@ -22,18 +24,34 @@ A real-time 3D visualization tool for Kubernetes clusters using Three.js. Watch 
 
 ## 🚀 Quick Start
 
-### Using Helm (Kubernetes)
+### Using Helm (Kubernetes) - Recommended for Production
 
-Deploy ThreeK8s directly to your Kubernetes cluster:
+Deploy ThreeK8s directly to your Kubernetes cluster using our official Helm chart:
 
 ```bash
-# Install using Helm from OCI registry
-helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version latest
+# Add the OCI registry (GitHub Container Registry)
+# Note: The chart will be available after the first release is created
+
+# Install the latest version
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
+
+# Install with custom namespace
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
+  --namespace threek8s \
+  --create-namespace \
+  --version 1.0.0
 
 # Install with custom values
 helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
-  --set frontend.env.API_URL=https://api.example.com \
-  --set backend.env.LOG_LEVEL=debug
+  --version 1.0.0 \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].host=threek8s.example.com \
+  --set backend.resources.limits.memory=512Mi
+```
+
+View available configuration options:
+```bash
+helm show values oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
 ```
 
 ### Using Docker Compose
@@ -326,13 +344,27 @@ Multi-architecture images supporting both `amd64` and `arm64`:
 - **Latest**: Always points to the most recent stable release
 
 ```bash
-# Pull specific version
-docker pull ghcr.io/stianfro/threek8s/backend:v1.0.0
-docker pull ghcr.io/stianfro/threek8s/frontend:v1.0.0
+# Pull current version (1.0.0)
+docker pull ghcr.io/stianfro/threek8s/backend:1.0.0
+docker pull ghcr.io/stianfro/threek8s/frontend:1.0.0
 
 # Pull latest version
 docker pull ghcr.io/stianfro/threek8s/backend:latest
 docker pull ghcr.io/stianfro/threek8s/frontend:latest
+
+# Run with Docker
+docker run -d \
+  --name threek8s-backend \
+  -p 8080:8080 \
+  -v ~/.kube/config:/root/.kube/config:ro \
+  ghcr.io/stianfro/threek8s/backend:1.0.0
+
+docker run -d \
+  --name threek8s-frontend \
+  -p 3000:80 \
+  -e VITE_API_URL=http://localhost:8080/api \
+  -e VITE_WS_URL=ws://localhost:8080/ws \
+  ghcr.io/stianfro/threek8s/frontend:1.0.0
 ```
 
 #### Helm Chart
@@ -397,38 +429,173 @@ The application includes:
 
 #### Using Helm (Recommended)
 
-Deploy ThreeK8s with full production configuration:
+The official Helm chart provides a production-ready deployment with all necessary Kubernetes resources:
+
+```bash
+# Basic installation
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
+
+# Installation with Ingress enabled
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0 \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].host=threek8s.yourdomain.com \
+  --set ingress.className=nginx
+
+# Installation with resource limits and autoscaling
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0 \
+  --set backend.resources.requests.memory=256Mi \
+  --set backend.resources.limits.memory=512Mi \
+  --set backend.autoscaling.enabled=true \
+  --set backend.autoscaling.minReplicas=2 \
+  --set backend.autoscaling.maxReplicas=10
+
+# Check deployment status
+kubectl get all -n default -l app.kubernetes.io/name=threek8s
+
+# Access the application (without Ingress)
+kubectl port-forward service/threek8s-frontend 8080:80
+# Then open http://localhost:8080
+
+# Upgrade to a new version
+helm upgrade threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.1.0
+
+# Uninstall
+helm uninstall threek8s
+```
+
+The Helm chart includes:
+- **RBAC**: ClusterRole and ClusterRoleBinding for Kubernetes API access
+- **Services**: LoadBalancer/ClusterIP services for frontend and backend
+- **ConfigMaps**: For application configuration
+- **Secrets**: For sensitive data (if needed)
+- **HPA**: Horizontal Pod Autoscaler for automatic scaling
+- **PDB**: Pod Disruption Budgets for high availability
+- **NetworkPolicies**: For network segmentation (optional)
+- **Ingress**: For external access (optional)
+
+#### Using kubectl (Manual)
+
+For manual deployment without Helm, use the pre-built Docker images:
 
 ```yaml
 # kubernetes/deployment.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: threek8s
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: threek8s
+  namespace: threek8s
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: threek8s-viewer
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods", "namespaces"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: threek8s-viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: threek8s-viewer
+subjects:
+- kind: ServiceAccount
+  name: threek8s
+  namespace: threek8s
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: threek8s
+  name: threek8s-backend
   namespace: threek8s
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: threek8s
+      app: threek8s-backend
   template:
     metadata:
       labels:
-        app: threek8s
+        app: threek8s-backend
     spec:
-      serviceAccountName: threek8s-viewer
+      serviceAccountName: threek8s
       containers:
       - name: backend
-        image: threek8s-backend:latest
+        image: ghcr.io/stianfro/threek8s/backend:1.0.0
         ports:
-        - containerPort: 3001
+        - containerPort: 8080
         env:
         - name: NODE_ENV
           value: "production"
+        - name: PORT
+          value: "8080"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: threek8s-frontend
+  namespace: threek8s
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: threek8s-frontend
+  template:
+    metadata:
+      labels:
+        app: threek8s-frontend
+    spec:
+      containers:
       - name: frontend
-        image: threek8s-frontend:latest
+        image: ghcr.io/stianfro/threek8s/frontend:1.0.0
         ports:
         - containerPort: 80
+        env:
+        - name: VITE_API_URL
+          value: "http://threek8s-backend:8080/api"
+        - name: VITE_WS_URL
+          value: "ws://threek8s-backend:8080/ws"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: threek8s-backend
+  namespace: threek8s
+spec:
+  selector:
+    app: threek8s-backend
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: threek8s-frontend
+  namespace: threek8s
+spec:
+  type: LoadBalancer
+  selector:
+    app: threek8s-frontend
+  ports:
+  - port: 80
+    targetPort: 80
+```
+
+Apply the configuration:
+```bash
+kubectl apply -f kubernetes/deployment.yaml
+kubectl get pods -n threek8s
+kubectl get svc -n threek8s
 ```
 
 ## 🔍 Troubleshooting
