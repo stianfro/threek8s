@@ -52,8 +52,8 @@ export class SceneManager {
     const controls = new OrbitControls(this.camera, this.renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 30;
-    controls.maxDistance = 150;
+    controls.minDistance = 20;  // Allow closer zoom
+    controls.maxDistance = 300; // Allow further zoom out for large clusters
     // Lock to top-down view
     controls.minPolarAngle = 0; // 0 degrees (straight down)
     controls.maxPolarAngle = 0.1; // Nearly straight down
@@ -166,6 +166,10 @@ export class SceneManager {
 
   public getCamera(): THREE.PerspectiveCamera {
     return this.camera;
+  }
+
+  public getControls(): OrbitControls {
+    return this.controls;
   }
 
   public getRaycaster(): THREE.Raycaster {

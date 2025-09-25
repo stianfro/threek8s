@@ -37,6 +37,9 @@ export class VisualizationManager {
   private updateNodes(nodes: KubernetesNode[]): void {
     const currentNodeIds = new Set(nodes.map(n => n.uid));
 
+    // Reset node scale for recalculation
+    this.nodeScale = 1;
+
     nodes.forEach((nodeData, index) => {
       let node = this.nodes.get(nodeData.uid);
 
@@ -65,6 +68,7 @@ export class VisualizationManager {
     });
 
     this.layoutNodes();
+    this.adjustCameraForContent();
   }
 
   private updatePods(pods: Pod[]): void {
@@ -140,32 +144,124 @@ export class VisualizationManager {
   }
 
   private calculateNodePosition(index: number, total: number): THREE.Vector3 {
-    // Create a 2D grid layout for nodes
-    const nodeSpacing = 30; // Space between nodes
-    const nodesPerRow = Math.min(4, total); // Max 4 nodes per row
+    // Dynamic grid layout that scales with node count
+    // Calculate optimal grid dimensions based on aspect ratio
+    const aspectRatio = 16 / 9; // Typical screen aspect ratio
 
-    const row = Math.floor(index / nodesPerRow);
-    const col = index % nodesPerRow;
+    // Calculate grid dimensions
+    let cols = Math.ceil(Math.sqrt(total * aspectRatio));
+    let rows = Math.ceil(total / cols);
+
+    // Ensure at least 2 columns for better layout
+    if (cols < 2 && total > 1) cols = 2;
+
+    // Calculate dynamic spacing based on viewport constraints
+    const maxViewportWidth = 80;  // Maximum width to use
+    const maxViewportHeight = 45;  // Maximum height to use
+
+    // Base node size (will be scaled down if needed)
+    const baseNodeSize = 20;
+    const minSpacing = 2; // Minimum spacing between nodes
+
+    // Calculate spacing to fit all nodes in viewport
+    const requiredWidth = cols * baseNodeSize + (cols - 1) * minSpacing;
+    const requiredHeight = rows * baseNodeSize + (rows - 1) * minSpacing;
+
+    // Calculate scale factor if content exceeds viewport
+    const scaleX = requiredWidth > maxViewportWidth ? maxViewportWidth / requiredWidth : 1;
+    const scaleZ = requiredHeight > maxViewportHeight ? maxViewportHeight / requiredHeight : 1;
+    const scale = Math.min(scaleX, scaleZ);
+
+    // Apply scaling
+    const nodeSize = baseNodeSize * scale;
+    const spacing = nodeSize + minSpacing * scale;
+
+    // Calculate position
+    const row = Math.floor(index / cols);
+    const col = index % cols;
 
     // Center the layout
-    const totalWidth = (nodesPerRow - 1) * nodeSpacing;
-    const totalDepth = (Math.ceil(total / nodesPerRow) - 1) * nodeSpacing;
+    const totalWidth = cols * nodeSize + (cols - 1) * minSpacing * scale;
+    const totalDepth = rows * nodeSize + (rows - 1) * minSpacing * scale;
 
-    const x = col * nodeSpacing - totalWidth / 2;
-    const z = row * nodeSpacing - totalDepth / 2;
+    const x = col * spacing - totalWidth / 2 + nodeSize / 2;
+    const z = row * spacing - totalDepth / 2 + nodeSize / 2;
     const y = 0; // Keep all nodes at ground level for 2D view
+
+    // Store the calculated scale for node sizing
+    if (!this.nodeScale) {
+      this.nodeScale = scale;
+    }
 
     return new THREE.Vector3(x, y, z);
   }
+
+  private nodeScale: number = 1;
 
   private layoutNodes(): void {
     const nodeArray = Array.from(this.nodes.values());
     const total = nodeArray.length;
 
+    // Recalculate positions with proper scaling
+    this.nodeScale = 1; // Reset before calculation
+
     nodeArray.forEach((node, index) => {
       const targetPosition = this.calculateNodePosition(index, total);
       this.animateNodePosition(node, targetPosition);
+
+      // Apply dynamic scaling to node
+      const targetScale = this.nodeScale;
+      this.animateNodeScale(node, targetScale);
     });
+  }
+
+  private animateNodeScale(node: NodeObject, targetScale: number): void {
+    const duration = 500;
+    const startTime = Date.now();
+    const startScale = node.scale.x;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = this.easeOutCubic(progress);
+
+      const scale = startScale + (targetScale - startScale) * easedProgress;
+      node.scale.setScalar(scale);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    animate();
+  }
+
+  private adjustCameraForContent(): void {
+    const nodeArray = Array.from(this.nodes.values());
+    if (nodeArray.length === 0) return;
+
+    // Calculate bounding box of all nodes
+    const box = new THREE.Box3();
+    nodeArray.forEach(node => {
+      box.expandByObject(node);
+    });
+
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+
+    // Adjust camera position to fit all content
+    const maxDimension = Math.max(size.x, size.z);
+    const fov = this.sceneManager.getCamera().fov * (Math.PI / 180);
+    const cameraZ = Math.abs(maxDimension / 2 / Math.tan(fov / 2));
+
+    // Set camera to look at center and position it appropriately
+    const targetHeight = Math.max(100, cameraZ * 1.5); // Minimum 100 units up
+    this.sceneManager.getCamera().position.set(center.x, targetHeight, center.z + 0.001);
+    this.sceneManager.getCamera().lookAt(center.x, 0, center.z);
+
+    // Update controls target
+    this.sceneManager.getControls().target.set(center.x, 0, center.z);
+    this.sceneManager.getControls().update();
   }
 
   private animateNodeCreation(node: NodeObject): void {
