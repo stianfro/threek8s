@@ -59,16 +59,24 @@ jobs:
       - name: Determine version tag
         id: version
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          # Check if called from another workflow with a tag input
+          if [[ -n "${{ inputs.tag }}" ]]; then
             TAG="${{ inputs.tag }}"
-          elif [[ "${{ github.event_name }}" == "workflow_call" ]]; then
+            echo "Using tag from workflow input: $TAG"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             TAG="${{ inputs.tag }}"
+            echo "Using tag from manual dispatch: $TAG"
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
+            echo "Using tag from git ref: $TAG"
           elif [[ "${{ github.event_name }}" == "release" ]]; then
             TAG="${{ github.event.release.tag_name }}"
+            echo "Using tag from release event: $TAG"
           else
-            echo "Error: No valid tag found for push"
+            echo "Error: No valid tag found"
+            echo "Event: ${{ github.event_name }}"
+            echo "Ref: ${{ github.ref }}"
+            echo "Input tag: ${{ inputs.tag }}"
             exit 1
           fi
 
@@ -78,7 +86,7 @@ jobs:
           fi
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Using tag: $TAG"
+          echo "Final tag: $TAG"
 
       - name: Extract metadata for ${{ matrix.service }}
         id: meta
