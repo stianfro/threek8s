@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/stianfro/threek8s/compare/v1.0.3...v1.0.4) (2025-09-25)
+
+
+### Bug Fixes
+
+* remove ARM64 support and build only for amd64 ([b3a9544](https://github.com/stianfro/threek8s/commit/b3a954441b0ef2579c7e6101d593d07e3e83309c))
+
 ## [1.0.3](https://github.com/stianfro/threek8s/compare/v1.0.2...v1.0.3) (2025-09-25)
 
 
