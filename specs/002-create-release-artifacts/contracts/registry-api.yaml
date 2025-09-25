@@ -1,0 +1,137 @@
+openapi: 3.0.0
+info:
+  title: Container Registry API
+  version: 1.0.0
+  description: Contract for interacting with ghcr.io container registry
+
+paths:
+  /v2/{namespace}/{image}/manifests/{tag}:
+    get:
+      summary: Get image manifest
+      operationId: getManifest
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "stianfro/threek8s"
+        - name: image
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [frontend, backend]
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "1.0.0"
+      responses:
+        '200':
+          description: Image manifest
+          content:
+            application/vnd.docker.distribution.manifest.v2+json:
+              schema:
+                $ref: '#/components/schemas/ImageManifest'
+        '404':
+          description: Image or tag not found
+
+    put:
+      summary: Push image manifest
+      operationId: pushManifest
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: image
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/vnd.docker.distribution.manifest.v2+json:
+            schema:
+              $ref: '#/components/schemas/ImageManifest'
+      responses:
+        '201':
+          description: Manifest created
+          headers:
+            Location:
+              schema:
+                type: string
+            Docker-Content-Digest:
+              schema:
+                type: string
+
+  /v2/{namespace}/{image}/tags/list:
+    get:
+      summary: List available tags
+      operationId: listTags
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: image
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tag list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+
+components:
+  schemas:
+    ImageManifest:
+      type: object
+      properties:
+        schemaVersion:
+          type: integer
+          example: 2
+        mediaType:
+          type: string
+          example: "application/vnd.docker.distribution.manifest.v2+json"
+        config:
+          type: object
+          properties:
+            mediaType:
+              type: string
+            size:
+              type: integer
+            digest:
+              type: string
+        layers:
+          type: array
+          items:
+            type: object
+            properties:
+              mediaType:
+                type: string
+              size:
+                type: integer
+              digest:
+                type: string

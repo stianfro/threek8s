@@ -1,0 +1,92 @@
+openapi: 3.0.0
+info:
+  title: GitHub Actions Release Workflow API
+  version: 1.0.0
+  description: Contract for GitHub Actions workflows that build and publish release artifacts
+
+paths:
+  /workflow/dispatch:
+    post:
+      summary: Trigger release workflow
+      operationId: triggerRelease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ref
+                - inputs
+              properties:
+                ref:
+                  type: string
+                  description: Git ref (branch or tag)
+                  example: "v1.0.0"
+                inputs:
+                  type: object
+                  properties:
+                    release_type:
+                      type: string
+                      enum: [patch, minor, major]
+                    dry_run:
+                      type: boolean
+                      default: false
+      responses:
+        '204':
+          description: Workflow triggered successfully
+        '422':
+          description: Invalid ref or inputs
+
+  /workflow/runs/{run_id}:
+    get:
+      summary: Get workflow run status
+      operationId: getWorkflowStatus
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Workflow run details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowRun'
+
+components:
+  schemas:
+    WorkflowRun:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [queued, in_progress, completed]
+        conclusion:
+          type: string
+          enum: [success, failure, cancelled, skipped]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+
+    Artifact:
+      type: object
+      properties:
+        name:
+          type: string
+        size_in_bytes:
+          type: integer
+        archive_download_url:
+          type: string
+          format: uri

@@ -1,0 +1,325 @@
+openapi: 3.0.0
+info:
+  title: Kubernetes 3D Visualization API
+  version: 1.0.0
+  description: REST API for Kubernetes cluster visualization backend
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check if the service is running and connected to cluster
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  cluster:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                      name:
+                        type: string
+                      version:
+                        type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /cluster/info:
+    get:
+      summary: Get cluster information
+      description: Retrieve basic cluster information and connection status
+      responses:
+        '200':
+          description: Cluster information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: my-cluster
+                  version:
+                    type: string
+                    example: v1.29.0
+                  apiServer:
+                    type: string
+                    example: https://api.cluster.local:6443
+                  connected:
+                    type: boolean
+                  nodeCount:
+                    type: integer
+                  namespaceCount:
+                    type: integer
+        '503':
+          description: Cluster not connected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /nodes:
+    get:
+      summary: List all nodes
+      description: Get current state of all nodes in the cluster
+      responses:
+        '200':
+          description: List of nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Node'
+        '503':
+          description: Cluster not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pods:
+    get:
+      summary: List all pods
+      description: Get current state of all pods across all namespaces
+      parameters:
+        - name: namespace
+          in: query
+          required: false
+          description: Filter by namespace
+          schema:
+            type: string
+        - name: node
+          in: query
+          required: false
+          description: Filter by node name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of pods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pod'
+        '503':
+          description: Cluster not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /namespaces:
+    get:
+      summary: List all namespaces
+      description: Get all namespaces in the cluster
+      responses:
+        '200':
+          description: List of namespaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Namespace'
+        '503':
+          description: Cluster not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /config/validate:
+    post:
+      summary: Validate kubeconfig
+      description: Test if the provided kubeconfig can connect to cluster
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kubeconfigPath:
+                  type: string
+                  description: Path to kubeconfig file
+              required:
+                - kubeconfigPath
+      responses:
+        '200':
+          description: Kubeconfig is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  cluster:
+                    type: string
+                  user:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid kubeconfig
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Node:
+      type: object
+      properties:
+        name:
+          type: string
+        uid:
+          type: string
+        status:
+          type: string
+          enum: [Ready, NotReady, Unknown]
+        role:
+          type: string
+          enum: [master, worker]
+        capacity:
+          $ref: '#/components/schemas/Resources'
+        allocatable:
+          $ref: '#/components/schemas/Resources'
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeCondition'
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        creationTimestamp:
+          type: string
+          format: date-time
+
+    Pod:
+      type: object
+      properties:
+        name:
+          type: string
+        uid:
+          type: string
+        namespace:
+          type: string
+        nodeName:
+          type: string
+        phase:
+          type: string
+          enum: [Pending, Running, Succeeded, Failed, Unknown]
+        status:
+          type: string
+        containers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Container'
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        creationTimestamp:
+          type: string
+          format: date-time
+        deletionTimestamp:
+          type: string
+          format: date-time
+          nullable: true
+
+    Namespace:
+      type: object
+      properties:
+        name:
+          type: string
+        uid:
+          type: string
+        status:
+          type: string
+          enum: [Active, Terminating]
+        podCount:
+          type: integer
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+
+    Container:
+      type: object
+      properties:
+        name:
+          type: string
+        image:
+          type: string
+        ready:
+          type: boolean
+        state:
+          type: string
+          enum: [waiting, running, terminated]
+
+    Resources:
+      type: object
+      properties:
+        cpu:
+          type: string
+          example: "4000m"
+        memory:
+          type: string
+          example: "8Gi"
+        pods:
+          type: string
+          example: "110"
+        storage:
+          type: string
+          example: "100Gi"
+
+    NodeCondition:
+      type: object
+      properties:
+        type:
+          type: string
+        status:
+          type: string
+          enum: [True, False, Unknown]
+        lastTransitionTime:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        message:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+      required:
+        - error
+        - message
