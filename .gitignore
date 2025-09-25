@@ -100,4 +100,4 @@ kubeconfig
 
 # Temporary directories
 tmp/
-temp/
+temp/helm/values-production.yaml
