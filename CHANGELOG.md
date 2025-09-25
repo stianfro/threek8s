@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.0.1](https://github.com/stianfro/threek8s/compare/v1.0.0...v1.0.1) (2025-09-25)
+
+
+### Bug Fixes
+
+* add id-token write permission to release-please workflow ([7f9d529](https://github.com/stianfro/threek8s/commit/7f9d529f2acecf7bf67a3e91cb77cc5113a2a656))
+* trigger release ([f042852](https://github.com/stianfro/threek8s/commit/f042852c59cd1766938d543ab681c243e6153af3))
+* update Release Please configuration for monorepo ([99b965a](https://github.com/stianfro/threek8s/commit/99b965a5f0c005d9fb3fbf2773cf214ab7d8b18e))
+
+
+### Documentation
+
+* update README with v1.0.0 deployment instructions ([42acadd](https://github.com/stianfro/threek8s/commit/42acaddf4531a103336f35194e7f93ee7d1a84df))
+
+
+### Miscellaneous
+
+* add project configuration and specification files ([#4](https://github.com/stianfro/threek8s/issues/4)) ([69a314b](https://github.com/stianfro/threek8s/commit/69a314b1cbc3a784998d8a7085e6f4e84af0d53b))
+* add root .gitignore file ([4e14c69](https://github.com/stianfro/threek8s/commit/4e14c6927b5640ceedb6d2e7affc2ae9ef65d14e))
+* **main:** release 1.0.0 ([#3](https://github.com/stianfro/threek8s/issues/3)) ([e585990](https://github.com/stianfro/threek8s/commit/e585990df8e25a6d389180198d7341a369a4c0ad))
+
 ## 1.0.0 (2025-09-25)
 
 
