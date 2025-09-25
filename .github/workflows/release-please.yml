@@ -22,7 +22,7 @@ jobs:
       pr: ${{ steps.release.outputs.pr }}
     steps:
       - name: Release Please
-        uses: google-github-actions/release-please-action@v4
+        uses: googleapis/release-please-action@v4
         id: release
         with:
           config-file: release-please-config.json
