@@ -41,10 +41,32 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Copy config template
+COPY public/config.js.template /usr/share/nginx/html/config.js.template
+
+# Create entrypoint script for runtime configuration
+RUN cat <<'EOF' > /docker-entrypoint.sh
+#!/bin/sh
+set -e
+
+# Generate runtime config
+echo "Generating runtime configuration..."
+envsubst '${VITE_API_URL} ${VITE_WS_URL}' < /usr/share/nginx/html/config.js.template > /usr/share/nginx/html/config.js
+echo "Runtime configuration generated:"
+cat /usr/share/nginx/html/config.js
+
+# Start nginx
+exec nginx -g 'daemon off;'
+EOF
+RUN chmod +x /docker-entrypoint.sh
+
 # Prepare for running as non-root (OpenShift compatible)
-# Make nginx directories writable by root group
+# Make nginx directories and entrypoint writable by root group
 RUN chgrp -R 0 /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx /var/run /docker-entrypoint.d && \
     chmod -R g+rwX /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx /var/run /docker-entrypoint.d && \
+    # Make entrypoint executable and writable by root group
+    chgrp 0 /docker-entrypoint.sh && \
+    chmod g+rx /docker-entrypoint.sh && \
     # Create nginx.pid file
     touch /var/run/nginx.pid && \
     chgrp 0 /var/run/nginx.pid && \
@@ -72,5 +94,5 @@ LABEL maintainer="threek8s-team" \
       org.opencontainers.image.description="React/Three.js frontend for 3D Kubernetes visualization" \
       org.opencontainers.image.vendor="threek8s"
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Use entrypoint script to generate config and start nginx
+ENTRYPOINT ["/docker-entrypoint.sh"]

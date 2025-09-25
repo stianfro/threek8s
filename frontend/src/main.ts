@@ -5,13 +5,16 @@ import { WebSocketService } from './services/WebSocketService';
 import { ApiService } from './services/ApiService';
 import { StateManager } from './services/StateManager';
 import type { StateUpdate, EventMessage } from './types/kubernetes';
-
-// Configuration
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws';
+import { loadRuntimeConfig } from './config/runtime';
 
 // Create main app
 async function initApp() {
+  // Load runtime configuration first
+  const config = await loadRuntimeConfig();
+  const API_URL = config.apiUrl;
+  const WS_URL = config.wsUrl;
+
+  console.log('Using configuration:', { API_URL, WS_URL });
   // Create container
   const app = document.querySelector<HTMLDivElement>('#app');
   if (!app) {

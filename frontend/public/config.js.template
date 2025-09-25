@@ -1,0 +1,5 @@
+// Runtime configuration - populated by Docker entrypoint
+window.__RUNTIME_CONFIG__ = {
+  apiUrl: '${VITE_API_URL}',
+  wsUrl: '${VITE_WS_URL}'
+};
