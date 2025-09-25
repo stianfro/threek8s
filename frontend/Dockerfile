@@ -41,20 +41,6 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create environment variable substitution script for runtime config injection
-COPY <<'EOF' /docker-entrypoint.d/30-envsubst-on-templates.sh
-#!/bin/sh
-set -e
-
-# Replace environment variables in built files
-find /usr/share/nginx/html -name "*.js" -exec sed -i "s|VITE_API_URL_PLACEHOLDER|${VITE_API_URL:-http://localhost:3001/api}|g" {} \;
-find /usr/share/nginx/html -name "*.js" -exec sed -i "s|VITE_WS_URL_PLACEHOLDER|${VITE_WS_URL:-ws://localhost:3001/ws}|g" {} \;
-
-echo "Environment variables injected successfully"
-EOF
-
-RUN chmod +x /docker-entrypoint.d/30-envsubst-on-templates.sh
-
 # Prepare for running as non-root (OpenShift compatible)
 # Make nginx directories writable by root group
 RUN chgrp -R 0 /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx /var/run /docker-entrypoint.d && \
@@ -71,12 +57,12 @@ USER 1001
 ENV VITE_API_URL=http://localhost:3001/api
 ENV VITE_WS_URL=ws://localhost:3001/ws
 
-# Expose port 80 for the frontend
-EXPOSE 80
+# Expose port 8080 for the frontend (OpenShift compatible)
+EXPOSE 8080
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
+    CMD curl -f http://localhost:8080/health || exit 1
 
 # Labels for better container management
 LABEL maintainer="threek8s-team" \
