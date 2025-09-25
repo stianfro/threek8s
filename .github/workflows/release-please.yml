@@ -29,14 +29,14 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Checkout repository
-        if: ${{ steps.release.outputs.releases_created }}
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
   build-images:
     needs: release-please
-    if: ${{ needs.release-please.outputs.releases_created }}
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     uses: ./.github/workflows/publish-images.yml
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
@@ -44,7 +44,7 @@ jobs:
 
   publish-helm:
     needs: [release-please, build-images]
-    if: ${{ needs.release-please.outputs.releases_created }}
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     uses: ./.github/workflows/publish-helm.yml
     with:
       chart_version: ${{ needs.release-please.outputs.version }}
@@ -53,7 +53,7 @@ jobs:
 
   update-release:
     needs: [release-please, build-images, publish-helm]
-    if: ${{ needs.release-please.outputs.releases_created }}
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
