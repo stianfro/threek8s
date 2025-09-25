@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.1](https://github.com/stianfro/threek8s/compare/v1.1.0...v1.1.1) (2025-09-25)
+
+
+### Bug Fixes
+
+* add root-level health check endpoints for Kubernetes probes ([627346f](https://github.com/stianfro/threek8s/commit/627346fd5982eecc7e5dd27ee5a95ed92801939f))
+* implement dynamic node scaling and viewport adjustment ([ef4568e](https://github.com/stianfro/threek8s/commit/ef4568e0f9b4871eb273d8c1546c7088e6d96666))
+
+
+### Miscellaneous
+
+* update values ([dc03e04](https://github.com/stianfro/threek8s/commit/dc03e04abd61333f419252cfeb3b7373134a14e6))
+
 ## [1.1.0](https://github.com/stianfro/threek8s/compare/v1.0.6...v1.1.0) (2025-09-25)
 
 
