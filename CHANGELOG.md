@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/stianfro/threek8s/compare/v1.1.3...v1.1.4) (2025-09-25)
+
+
+### Bug Fixes
+
+* resolve performance issues with large Kubernetes clusters ([45dd7fd](https://github.com/stianfro/threek8s/commit/45dd7fd08e25f37bcbdd82d434e2952f691724a0))
+
 ## [1.1.3](https://github.com/stianfro/threek8s/compare/v1.1.2...v1.1.3) (2025-09-25)
 
 
