@@ -42,7 +42,6 @@ junit.xml
 .prettierrc*
 jest.config.*
 vitest.config.*
-tsconfig.json
 
 # Docker-related files (not needed in image)
 docker-compose*.yml
@@ -58,7 +57,6 @@ docs/
 
 # Build tools and configurations
 webpack.config.*
-vite.config.*
 rollup.config.*
 babel.config.*
 
