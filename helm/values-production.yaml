@@ -4,9 +4,9 @@
 
 frontend:
   env:
-    VITE_API_URL: "https://threek8s-api.apps.aa-sre-64uhyc.clusters.intilitycloud.com/api"
-    VITE_WS_URL: "wss://threek8s-api.apps.aa-sre-64uhyc.clusters.intilitycloud.com/ws"
+    VITE_API_URL: "https://threek8s-api.example.com/api"
+    VITE_WS_URL: "wss://threek8s-api.example.com/ws"
 
 backend:
   env:
-    CORS_ORIGINS: "https://threek8s.apps.aa-sre-64uhyc.clusters.intilitycloud.com"
+    CORS_ORIGINS: "https://threek8s.example.com"
