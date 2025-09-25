@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org)
 [![Three.js](https://img.shields.io/badge/Three.js-Latest-orange)](https://threejs.org)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue)](https://github.com/stianfro/threek8s/pkgs)
-[![Helm](https://img.shields.io/badge/Helm-v1.0.0-purple)](https://github.com/stianfro/threek8s/pkgs)
+[![Helm](https://img.shields.io/badge/Helm-v1.0.6-purple)](https://github.com/stianfro/threek8s/pkgs)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 A real-time 3D visualization tool for Kubernetes clusters using Three.js.
@@ -34,26 +34,69 @@ Deploy ThreeK8s directly to your Kubernetes cluster using our official Helm char
 # Note: The chart will be available after the first release is created
 
 # Install the latest version
-helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.6
 
 # Install with custom namespace
 helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
   --namespace threek8s \
   --create-namespace \
-  --version 1.0.0
+  --version 1.0.6
 
 # Install with custom values
 helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
-  --version 1.0.0 \
+  --version 1.0.6 \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host=threek8s.example.com \
-  --set backend.resources.limits.memory=512Mi
+  --set backend.resources.requests.memory=256Mi
+```
+
+#### Production Deployment with Custom URLs
+
+For production deployments where frontend and backend are exposed via different URLs (e.g., with Ingress), create a values override file:
+
+```yaml
+# values-production.yaml
+frontend:
+  env:
+    VITE_API_URL: "https://api.yourdomain.com/api"
+    VITE_WS_URL: "wss://api.yourdomain.com/ws"
+
+backend:
+  env:
+    CORS_ORIGINS: "https://app.yourdomain.com"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: app.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: threek8s-frontend
+            port: 80
+    - host: api.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: threek8s-backend
+            port: 8080
+```
+
+Then deploy using the override file:
+
+```bash
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
+  --version 1.0.6 \
+  -f values-production.yaml
 ```
 
 View available configuration options:
 
 ```bash
-helm show values oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
+helm show values oci://ghcr.io/stianfro/threek8s/chart --version 1.0.6
 ```
 
 ### Using Docker Compose
