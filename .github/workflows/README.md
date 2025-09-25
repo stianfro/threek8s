@@ -6,10 +6,10 @@ This directory contains GitHub Actions workflows for building, testing, and publ
 
 ## Workflows
 
-### build-images.yml
-- **Purpose**: Build Docker images for frontend and backend
+### ci.yml
+- **Purpose**: Continuous Integration - build and test without pushing
 - **Triggers**: Push to main/develop, pull requests, manual dispatch
-- **Features**: Multi-arch builds (amd64, arm64), build caching, metadata extraction
+- **Features**: Docker build validation, Helm chart linting, workflow validation
 
 ### publish-images.yml
 - **Purpose**: Publish Docker images to GitHub Container Registry (ghcr.io)
