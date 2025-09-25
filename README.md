@@ -7,6 +7,8 @@
 
 A real-time 3D visualization tool for Kubernetes clusters using Three.js. Watch your nodes and pods come to life in an interactive 3D space with smooth animations and live updates.
 
+<img width="3548" height="1956" alt="CleanShot 2025-09-25 at 11 45 28@2x" src="https://github.com/user-attachments/assets/220e89f2-1673-47c7-bdd0-5affbf3953f8" />
+
 ## ✨ Features
 
 - **3D Visualization**: Nodes displayed as large boxes containing pods as smaller boxes
