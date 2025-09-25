@@ -1,0 +1,143 @@
+openapi: 3.0.0
+info:
+  title: Helm Chart Registry API (OCI)
+  version: 1.0.0
+  description: Contract for publishing Helm charts to ghcr.io OCI registry
+
+paths:
+  /v2/{namespace}/chart/manifests/{version}:
+    get:
+      summary: Get Helm chart manifest
+      operationId: getChartManifest
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "stianfro/threek8s"
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "1.0.0"
+      responses:
+        '200':
+          description: Chart manifest
+          content:
+            application/vnd.oci.image.manifest.v1+json:
+              schema:
+                $ref: '#/components/schemas/ChartManifest'
+
+    put:
+      summary: Push Helm chart
+      operationId: pushChart
+      parameters:
+        - name: namespace
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/vnd.oci.image.manifest.v1+json:
+            schema:
+              $ref: '#/components/schemas/ChartManifest'
+      responses:
+        '201':
+          description: Chart uploaded successfully
+
+  /helm/install:
+    post:
+      summary: Install Helm chart
+      operationId: installChart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chart
+                - release_name
+              properties:
+                chart:
+                  type: string
+                  example: "oci://ghcr.io/stianfro/threek8s/chart"
+                release_name:
+                  type: string
+                  example: "threek8s"
+                namespace:
+                  type: string
+                  default: "default"
+                values:
+                  type: object
+                  description: Values to override defaults
+                version:
+                  type: string
+                  example: "1.0.0"
+      responses:
+        '200':
+          description: Installation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HelmRelease'
+
+components:
+  schemas:
+    ChartManifest:
+      type: object
+      properties:
+        schemaVersion:
+          type: integer
+        mediaType:
+          type: string
+        config:
+          type: object
+          properties:
+            mediaType:
+              type: string
+              example: "application/vnd.cncf.helm.config.v1+json"
+            digest:
+              type: string
+            size:
+              type: integer
+        layers:
+          type: array
+          items:
+            type: object
+            properties:
+              mediaType:
+                type: string
+                example: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+              digest:
+                type: string
+              size:
+                type: integer
+
+    HelmRelease:
+      type: object
+      properties:
+        name:
+          type: string
+        namespace:
+          type: string
+        revision:
+          type: integer
+        status:
+          type: string
+          enum: [deployed, pending-install, pending-upgrade, failed]
+        chart:
+          type: string
+        app_version:
+          type: string
+        values:
+          type: object
