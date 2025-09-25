@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.6](https://github.com/stianfro/threek8s/compare/v1.0.5...v1.0.6) (2025-09-25)
+
+
+### Bug Fixes
+
+* properly version Helm chart and use specific image tags ([1d670d5](https://github.com/stianfro/threek8s/commit/1d670d5bb02cb679a1bb721549f1c0e337e832c3))
+
 ## [1.0.5](https://github.com/stianfro/threek8s/compare/v1.0.4...v1.0.5) (2025-09-25)
 
 
