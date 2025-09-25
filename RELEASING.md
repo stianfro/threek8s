@@ -47,9 +47,52 @@ graph LR
     D --> E[Merge PR]
     E --> F[Create Release]
     F --> G[Build Images]
-    F --> H[Publish Helm]
-    G --> I[Push to ghcr.io]
-    H --> I
+    F --> H[Publish Helm Chart]
+    G --> I[ghcr.io/stianfro/threek8s/*]
+    H --> J[ghcr.io/stianfro/threek8s/chart]
+    I --> K[Release Complete]
+    J --> K
+```
+
+## 🚢 Helm Chart Publication Process
+
+The Helm chart publication process is fully automated and works as follows:
+
+### Chart Registry Path
+- **Current Path**: `oci://ghcr.io/stianfro/threek8s/chart`
+- **Registry**: GitHub Container Registry (GHCR)
+- **Access**: Public, no authentication required for pulling
+
+### Automated Workflow
+1. **Trigger**: When Release Please creates a new release
+2. **Version Sync**: Chart version is automatically updated to match the application version
+3. **Validation**: Chart is linted and templated to ensure validity
+4. **Packaging**: Chart is packaged into a `.tgz` file
+5. **Publishing**: Chart is pushed to `ghcr.io/stianfro/threek8s/chart`
+6. **Verification**: Installation is tested to ensure chart is accessible
+
+### Workflow Files
+- **Main workflow**: `.github/workflows/release-please.yml` (orchestrates the release)
+- **Helm publishing**: `.github/workflows/publish-helm.yml` (handles chart packaging and publishing)
+
+### Version Management
+- Chart version matches application version (e.g., app v1.2.3 → chart v1.2.3)
+- `Chart.yaml` is automatically updated during the release process
+- Both `version` and `appVersion` fields are synchronized
+
+### Installation Commands
+```bash
+# Install latest version
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart
+
+# Install specific version
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.2.3
+
+# Upgrade to latest
+helm upgrade threek8s oci://ghcr.io/stianfro/threek8s/chart
+
+# Show available versions
+helm search repo threek8s --versions
 ```
 
 ## 📦 Release Artifacts
@@ -64,10 +107,12 @@ Each release produces the following artifacts:
 - Provenance and SBOM attestation
 
 ### Helm Chart
-- `oci://ghcr.io/stianfro/threek8s/chart:<version>`
-- Independent chart versioning
-- OCI registry distribution
-- Values schema validation
+- **Registry Path**: `oci://ghcr.io/stianfro/threek8s/chart:<version>`
+- **Installation**: `helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version <version>`
+- Independent chart versioning synchronized with application releases
+- OCI registry distribution via GitHub Container Registry
+- Values schema validation and dependency management
+- Automatic chart packaging and publishing on each release
 
 ### GitHub Release
 - Source code archives (zip, tar.gz)
@@ -206,7 +251,7 @@ docker-compose logs
 ### 3. Kubernetes Test
 
 ```bash
-# Deploy to test cluster
+# Test local chart
 helm install test-release helm/threek8s/ \
   --namespace test \
   --create-namespace
@@ -215,8 +260,19 @@ helm install test-release helm/threek8s/ \
 kubectl get pods -n test
 helm test test-release -n test
 
+# Test published chart (after release)
+helm install test-release-oci oci://ghcr.io/stianfro/threek8s/chart \
+  --version <version> \
+  --namespace test-oci \
+  --create-namespace
+
+# Verify OCI chart deployment
+kubectl get pods -n test-oci
+helm test test-release-oci -n test-oci
+
 # Cleanup
 helm uninstall test-release -n test
+helm uninstall test-release-oci -n test-oci
 ```
 
 ## 📋 Release Checklist
@@ -234,7 +290,9 @@ Before merging Release Please PR:
 After release:
 
 - [ ] Images published to ghcr.io
-- [ ] Helm chart available in OCI registry
+- [ ] Helm chart available at `oci://ghcr.io/stianfro/threek8s/chart`
+- [ ] Chart version matches application version
+- [ ] Chart installation works: `helm install test oci://ghcr.io/stianfro/threek8s/chart --version <version>`
 - [ ] GitHub release created with notes
 - [ ] Announcement made (if major release)
 
@@ -280,13 +338,32 @@ After release:
    helm registry login ghcr.io
    ```
 
+3. Test chart publication:
+   ```bash
+   # Package the chart
+   helm package helm/threek8s/ --destination ./dist
+
+   # Push to correct OCI registry path
+   helm push ./dist/threek8s-*.tgz oci://ghcr.io/stianfro/threek8s/chart
+
+   # Verify chart is accessible
+   helm show chart oci://ghcr.io/stianfro/threek8s/chart --version <version>
+   ```
+
+4. Common issues:
+   - **Wrong registry path**: Ensure using `ghcr.io/stianfro/threek8s/chart`, not `ghcr.io/stianfro/threek8s`
+   - **Authentication**: Use `GITHUB_TOKEN` with `packages: write` permission
+   - **Version mismatch**: Check that chart version matches release version
+
 ## 📚 Resources
 
 - [Release Please Documentation](https://github.com/googleapis/release-please)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Semantic Versioning](https://semver.org/)
 - [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
-- [Helm OCI Registry](https://helm.sh/docs/topics/registries/)
+- [Helm OCI Registry Support](https://helm.sh/docs/topics/registries/)
+- [Helm Chart Repository Best Practices](https://helm.sh/docs/topics/chart_repository/)
+- [GitHub Actions: Publishing to GHCR](https://docs.github.com/en/actions/publishing-packages/publishing-docker-images)
 
 ## 🤝 Contributing to Releases
 
