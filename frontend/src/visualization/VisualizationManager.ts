@@ -230,7 +230,7 @@ export class VisualizationManager {
     return { width: width * 0.8, height: height * 0.8 }; // Use 80% of visible area for margins
   }
 
-  private calculateNodePosition(index: number, total: number): THREE.Vector3 {
+  private _calculateNodePosition(index: number, total: number): THREE.Vector3 {
     // Get actual visible viewport area
     const viewport = this.calculateVisibleArea();
     const aspectRatio = viewport.width / viewport.height;
@@ -276,12 +276,12 @@ export class VisualizationManager {
     const y = 0; // Keep all nodes at ground level for 2D view
 
     // Store the scale relative to base size for node sizing
-    this.nodeScale = nodeSize / baseNodeSize;
+    this._nodeScale = nodeSize / baseNodeSize;
 
     return new THREE.Vector3(x, y, z);
   }
 
-  private nodeScale: number = 1;
+  private _nodeScale: number = 1;
 
   private calculateLayout(nodeCount: number): { positions: THREE.Vector3[], scale: number } {
     // Get actual visible viewport area
@@ -371,27 +371,8 @@ export class VisualizationManager {
     return { positions, scale };
   }
 
-  private layoutNodes(): void {
-    const nodeArray = Array.from(this.nodes.values());
-    const total = nodeArray.length;
 
-    // Recalculate positions with proper scaling
-    this.nodeScale = 1; // Reset before calculation
-
-    nodeArray.forEach((node, index) => {
-      const targetPosition = this.calculateNodePosition(index, total);
-      this.animateNodePosition(node, targetPosition);
-
-      // Apply dynamic scaling to node
-      const targetScale = this.nodeScale;
-      this.animateNodeScale(node, targetScale);
-    });
-
-    // Update pod positions after node scaling
-    this.updatePodPositionsAfterNodeScale();
-  }
-
-  private updatePodPositionsAfterNodeScale(): void {
+  private _updatePodPositionsAfterNodeScale(): void {
     // Group pods by node
     const podsByNode = new Map<string, Pod[]>();
     this.pods.forEach(pod => {
