@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/stianfro/threek8s/compare/v1.0.1...v1.0.2) (2025-09-25)
+
+
+### Bug Fixes
+
+* correct GitHub Actions workflow conditions for releases ([4c5269d](https://github.com/stianfro/threek8s/commit/4c5269d934465d1348c4a39f9fbe8fa2781a15fd))
+
 ## [1.0.1](https://github.com/stianfro/threek8s/compare/v1.0.0...v1.0.1) (2025-09-25)
 
 
