@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ThreeK8s - Kubernetes 3D Visualization</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- 3D Viewport -->
+      <div class="viewport"></div>
+
+      <!-- UI Overlay -->
+      <div class="ui-overlay">
+        <!-- Status Bar -->
+        <div class="status-bar">
+          <div class="connection-status">
+            <div class="status-indicator"></div>
+            <span class="status-text">Connecting...</span>
+          </div>
+          <div class="cluster-info">
+            <span class="cluster-name">Loading...</span>
+            <div class="cluster-metrics">
+              Nodes: <span id="node-count">0</span> |
+              Pods: <span id="pod-count">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tooltip (hidden by default) -->
+        <div id="tooltip" class="tooltip" style="display: none;"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
