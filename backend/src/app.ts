@@ -39,6 +39,21 @@ export function createApp(
     next();
   });
 
+  // Kubernetes probe endpoints (lightweight, root-level)
+  app.get('/health', (req: Request, res: Response) => {
+    // Simple liveness check - server is running
+    res.status(200).send('OK');
+  });
+
+  app.get('/ready', (req: Request, res: Response) => {
+    // Readiness check - connected to Kubernetes
+    if (kubernetesService.isConnected()) {
+      res.status(200).send('Ready');
+    } else {
+      res.status(503).send('Not Ready');
+    }
+  });
+
   // API routes
   const apiRouter = express.Router();
 
