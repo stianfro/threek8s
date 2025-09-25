@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      platforms:
+        - linux/amd64
+        - linux/arm64
+      args:
+        - BUILDPLATFORM=linux/amd64
+        - TARGETPLATFORM=linux/amd64
+    ports:
+      - "80:80"
+    environment:
+      # Runtime environment variables for API endpoints
+      - VITE_API_URL=http://localhost:3001/api
+      - VITE_WS_URL=ws://localhost:3001/ws
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:noexec,nosuid,size=100m
+      - /var/log/nginx:noexec,nosuid,size=100m
+      - /var/run:noexec,nosuid,size=100m
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"

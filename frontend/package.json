@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "docker:build": "docker build -t threek8s-frontend .",
+    "docker:build:multi": "docker buildx build --platform linux/amd64,linux/arm64 -t threek8s-frontend .",
+    "docker:run": "docker run -p 80:80 threek8s-frontend",
+    "docker:test": "docker build -t threek8s-frontend:test --target builder . && docker run --rm threek8s-frontend:test npm test"
   },
   "devDependencies": {
     "@types/three": "^0.180.0",

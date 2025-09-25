@@ -1,0 +1,64 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.frontend.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "threek8s.fullname" . }}-frontend)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.frontend.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "threek8s.fullname" . }}-frontend'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "threek8s.fullname" . }}-frontend --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.frontend.service.port }}
+{{- else if contains "ClusterIP" .Values.frontend.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "threek8s.name" . }},app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=frontend" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Application Components:
+   - Frontend: {{ include "threek8s.fullname" . }}-frontend
+   - Backend:  {{ include "threek8s.fullname" . }}-backend
+
+3. Check deployment status:
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+   kubectl get services -l app.kubernetes.io/instance={{ .Release.Name }}
+
+4. View logs:
+   kubectl logs -l app.kubernetes.io/name={{ include "threek8s.name" . }},app.kubernetes.io/component=frontend
+   kubectl logs -l app.kubernetes.io/name={{ include "threek8s.name" . }},app.kubernetes.io/component=backend
+
+5. Configuration:
+{{- if .Values.configMap.create }}
+   - ConfigMap: {{ include "threek8s.configMapName" . }}
+{{- end }}
+{{- if .Values.serviceAccount.create }}
+   - ServiceAccount: {{ include "threek8s.serviceAccountName" . }}
+{{- end }}
+{{- if .Values.rbac.create }}
+   - RBAC permissions configured for Kubernetes API access
+{{- end }}
+
+6. Scaling:
+{{- if .Values.autoscaling.frontend.enabled }}
+   - Frontend HPA enabled ({{ .Values.autoscaling.frontend.minReplicas }}-{{ .Values.autoscaling.frontend.maxReplicas }} replicas)
+{{- end }}
+{{- if .Values.autoscaling.backend.enabled }}
+   - Backend HPA enabled ({{ .Values.autoscaling.backend.minReplicas }}-{{ .Values.autoscaling.backend.maxReplicas }} replicas)
+{{- end }}
+
+7. Health Checks:
+   - Frontend readiness: GET {{ include "threek8s.fullname" . }}-frontend/
+   - Backend readiness: GET {{ include "threek8s.fullname" . }}-backend/ready
+   - Backend liveness: GET {{ include "threek8s.fullname" . }}-backend/health
+
+For more information about ThreeK8s, visit:
+- GitHub: https://github.com/stianfro/threek8s
+- Documentation: https://github.com/stianfro/threek8s/blob/main/README.md
+
+Thank you for installing ThreeK8s! 🚀
