@@ -342,7 +342,7 @@ ThreeK8s provides production-ready release artifacts:
 
 #### Docker Images
 
-Multi-architecture images supporting both `amd64` and `arm64`:
+Docker images for `amd64` architecture:
 
 - **Backend**: `ghcr.io/stianfro/threek8s/backend:<version>`
 - **Frontend**: `ghcr.io/stianfro/threek8s/frontend:<version>`

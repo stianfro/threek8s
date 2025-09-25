@@ -1,12 +1,8 @@
 # Multi-stage Dockerfile for React/Three.js frontend
-# Optimized for both amd64 and arm64 architectures
+# Optimized for amd64 architecture
 
 # Build stage
-FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
-
-# Build arguments for cross-compilation
-ARG TARGETPLATFORM
-ARG BUILDPLATFORM
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 

@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for ThreeK8s Backend
-# Optimized for both amd64 and arm64 architectures
+# Optimized for amd64 architecture
 
 # Build stage
 FROM node:20-alpine AS builder
@@ -14,7 +14,7 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci --include=dev
+RUN npm ci
 
 # Copy all source files (excluding those in .dockerignore)
 COPY . .
@@ -38,7 +38,7 @@ RUN apk add --no-cache \
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production --omit=dev && \
+RUN npm ci --omit=dev && \
     npm cache clean --force
 
 # Copy built application from builder stage
