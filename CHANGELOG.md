@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/stianfro/threek8s/compare/v1.1.2...v1.1.3) (2025-09-25)
+
+
+### Bug Fixes
+
+* resolve pod-node alignment issues in viewport visualization ([#17](https://github.com/stianfro/threek8s/issues/17)) ([50d92ff](https://github.com/stianfro/threek8s/commit/50d92ff49429df0f37f3504ae9a9d98f473b948f))
+
 ## [1.1.2](https://github.com/stianfro/threek8s/compare/v1.1.1...v1.1.2) (2025-09-25)
 
 
