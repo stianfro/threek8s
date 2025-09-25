@@ -40,6 +40,11 @@
           "type": "yaml",
           "path": "helm/threek8s/Chart.yaml",
           "jsonpath": "$.appVersion"
+        },
+        {
+          "type": "yaml",
+          "path": "helm/threek8s/Chart.yaml",
+          "jsonpath": "$.version"
         }
       ]
     }

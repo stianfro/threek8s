@@ -13,7 +13,7 @@ frontend:
   image:
     registry: ghcr.io
     repository: stianfro/threek8s/frontend
-    tag: latest
+    tag: ""  # Uses Chart.AppVersion if not set
     pullPolicy: IfNotPresent
 
   replicaCount: 1
@@ -70,7 +70,7 @@ backend:
   image:
     registry: ghcr.io
     repository: stianfro/threek8s/backend
-    tag: latest
+    tag: ""  # Uses Chart.AppVersion if not set
     pullPolicy: IfNotPresent
 
   replicaCount: 1
