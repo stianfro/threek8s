@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/stianfro/threek8s/compare/v1.0.2...v1.0.3) (2025-09-25)
+
+
+### Bug Fixes
+
+* correct tag detection for workflow_call events ([f0cd2ad](https://github.com/stianfro/threek8s/commit/f0cd2ad72e8cec1eeb03591f197ca537dac70e1e))
+
 ## [1.0.2](https://github.com/stianfro/threek8s/compare/v1.0.1...v1.0.2) (2025-09-25)
 
 
