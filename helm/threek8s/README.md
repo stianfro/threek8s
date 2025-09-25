@@ -13,7 +13,7 @@ This Helm chart deploys ThreeK8s, a 3D Kubernetes cluster visualization tool, to
 To install the chart with the release name `threek8s`:
 
 ```bash
-helm install threek8s ./helm/threek8s
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart
 ```
 
 The command deploys ThreeK8s on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
@@ -113,13 +113,13 @@ The command removes all the Kubernetes components associated with the chart and 
 ### Basic Installation
 
 ```bash
-helm install threek8s ./helm/threek8s
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart
 ```
 
 ### With Custom Values
 
 ```bash
-helm install threek8s ./helm/threek8s \
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
   --set frontend.replicaCount=2 \
   --set backend.replicaCount=2 \
   --set ingress.enabled=true \
@@ -177,13 +177,13 @@ autoscaling:
 Install with:
 
 ```bash
-helm install threek8s ./helm/threek8s -f values-production.yaml
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart -f values-production.yaml
 ```
 
 ### Upgrading the Chart
 
 ```bash
-helm upgrade threek8s ./helm/threek8s
+helm upgrade threek8s oci://ghcr.io/stianfro/threek8s/chart
 ```
 
 ### Running Tests

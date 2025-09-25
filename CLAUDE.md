@@ -6,6 +6,8 @@ Auto-generated from all feature plans. Last updated: 2025-09-24
 - JavaScript/TypeScript (ES2022+), Node.js 20+ + Three.js (3D visualization), @kubernetes/client-node (K8s API), Express/WebSocket (real-time) (001-create-an-application)
 - JavaScript/TypeScript (ES2022+), Node.js 20+ (from existing codebase) + Docker, Helm 3, GitHub Actions, Release Please (002-create-release-artifacts)
 - N/A (artifacts stored in ghcr.io registry) (002-create-release-artifacts)
+- YAML/JSON (GitHub Actions, Helm, Release Please configs) + release-please-action v4, Helm 3.8.0+, GitHub Container Registry (003-fix-helm-chart-versioning-and-path)
+- GitHub Container Registry (ghcr.io) for OCI artifacts (003-fix-helm-chart-versioning-and-path)
 
 ## Project Structure
 ```
@@ -21,6 +23,7 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 JavaScript/TypeScript (ES2022+), Node.js 20+: Follow standard conventions
 
 ## Recent Changes
+- 003-fix-helm-chart-versioning-and-path: Added YAML/JSON (GitHub Actions, Helm, Release Please configs) + release-please-action v4, Helm 3.8.0+, GitHub Container Registry
 - 002-create-release-artifacts: Added JavaScript/TypeScript (ES2022+), Node.js 20+ (from existing codebase) + Docker, Helm 3, GitHub Actions, Release Please
 - 001-create-an-application: Added JavaScript/TypeScript (ES2022+), Node.js 20+ + Three.js (3D visualization), @kubernetes/client-node (K8s API), Express/WebSocket (real-time)
 

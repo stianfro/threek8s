@@ -1,0 +1,91 @@
+# Workflow Contract: publish-helm.yml
+# Validates the Helm chart publication workflow configuration
+
+name: Helm Chart Publication Contract
+version: 1.0.0
+
+environment_variables:
+  REGISTRY:
+    required: true
+    value: "ghcr.io"
+    description: "Container registry for OCI artifacts"
+
+  CHART_NAME:
+    required: true
+    value: "chart"
+    description: "Name used in OCI path (changed from 'threek8s' to 'chart')"
+
+  CHART_PATH:
+    required: true
+    value: "./helm/threek8s"
+    description: "Local path to Helm chart"
+
+oci_operations:
+  push:
+    command_pattern: "helm push .* oci://\\$\\{\\{ env.REGISTRY \\}\\}/\\$\\{\\{ github.repository_owner \\}\\}/threek8s/\\$\\{\\{ env.CHART_NAME \\}\\}"
+    expected_url: "oci://ghcr.io/stianfro/threek8s/chart"
+    validation:
+      - "URL must end with /chart"
+      - "No duplicate chart name in path"
+
+  pull:
+    command_patterns:
+      - "helm show chart oci://.*/chart"
+      - "helm install .* oci://.*/chart"
+      - "helm upgrade .* oci://.*/chart"
+    expected_url_base: "oci://ghcr.io/stianfro/threek8s/chart"
+    validation:
+      - "All references must use same URL pattern"
+      - "Must match push URL"
+
+version_management:
+  chart_version:
+    source: "Chart.yaml"
+    field: "version"
+    format: "semver"
+    synchronization: "release-please"
+
+  app_version:
+    source: "Chart.yaml"
+    field: "appVersion"
+    format: "semver"
+    synchronization: "release-please"
+
+workflow_triggers:
+  - type: "push"
+    condition: "tags matching v* or chart-v*"
+  - type: "release"
+    condition: "published"
+  - type: "workflow_dispatch"
+    inputs:
+      - chart_version
+      - app_version
+
+validation_steps:
+  pre_publish:
+    - "helm lint ${CHART_PATH}"
+    - "helm template test-release ${CHART_PATH}"
+    - "version format validation"
+
+  post_publish:
+    - "helm show chart <oci_url> --version ${version}"
+    - "verify chart in registry"
+
+expected_artifacts:
+  - type: "helm_chart"
+    format: "tgz"
+    registry: "ghcr.io/stianfro/threek8s/chart"
+    naming: "threek8s-{version}.tgz"
+
+error_conditions:
+  - id: "version_mismatch"
+    description: "Chart version doesn't match release version"
+    resolution: "Ensure release-please updates Chart.yaml"
+
+  - id: "push_failed"
+    description: "Unable to push to OCI registry"
+    resolution: "Check GITHUB_TOKEN permissions for packages:write"
+
+  - id: "wrong_path"
+    description: "Chart pushed to wrong registry path"
+    resolution: "Verify CHART_NAME env var is 'chart'"
