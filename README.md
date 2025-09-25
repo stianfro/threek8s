@@ -7,7 +7,8 @@
 [![Helm](https://img.shields.io/badge/Helm-v1.0.0-purple)](https://github.com/stianfro/threek8s/pkgs)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-A real-time 3D visualization tool for Kubernetes clusters using Three.js. Watch your nodes and pods come to life in an interactive 3D space with smooth animations and live updates.
+A real-time 3D visualization tool for Kubernetes clusters using Three.js.
+Watch your nodes and pods come to life in an interactive 3D space with smooth animations and live updates.
 
 <img width="3548" height="1956" alt="CleanShot 2025-09-25 at 11 45 28@2x" src="https://github.com/user-attachments/assets/220e89f2-1673-47c7-bdd0-5affbf3953f8" />
 
@@ -50,6 +51,7 @@ helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
 ```
 
 View available configuration options:
+
 ```bash
 helm show values oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
 ```
@@ -135,9 +137,9 @@ kind: ClusterRole
 metadata:
   name: threek8s-viewer
 rules:
-- apiGroups: [""]
-  resources: ["nodes", "pods", "namespaces"]
-  verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
 ```
 
 Bind it to your service account or user:
@@ -152,9 +154,9 @@ roleRef:
   kind: ClusterRole
   name: threek8s-viewer
 subjects:
-- kind: User
-  name: your-username
-  apiGroup: rbac.authorization.k8s.io
+  - kind: User
+    name: your-username
+    apiGroup: rbac.authorization.k8s.io
 ```
 
 ## ⚙️ Configuration
@@ -191,24 +193,26 @@ VITE_WS_URL=ws://localhost:3001/ws      # WebSocket URL
 
 ### Controls
 
-| Action | Control |
-|--------|---------|
-| **Rotate View** | Left-click and drag |
-| **Pan View** | Right-click and drag |
-| **Zoom In/Out** | Scroll wheel |
-| **Select Object** | Left-click on node or pod |
-| **Focus Object** | Double-click on node or pod |
-| **View Details** | Hover over objects |
+| Action            | Control                     |
+| ----------------- | --------------------------- |
+| **Rotate View**   | Left-click and drag         |
+| **Pan View**      | Right-click and drag        |
+| **Zoom In/Out**   | Scroll wheel                |
+| **Select Object** | Left-click on node or pod   |
+| **Focus Object**  | Double-click on node or pod |
+| **View Details**  | Hover over objects          |
 
 ### Understanding the Visualization
 
 #### Node Representation
+
 - **Large Boxes**: Kubernetes nodes
 - **Green**: Ready nodes
 - **Orange**: NotReady nodes
 - **Gray**: Unknown status
 
 #### Pod Representation
+
 - **Small Boxes**: Pods (positioned inside their nodes)
 - **Blue**: Running pods
 - **Yellow**: Pending pods
@@ -220,6 +224,7 @@ VITE_WS_URL=ws://localhost:3001/ws      # WebSocket URL
 - **Purple**: ImagePull errors
 
 #### Visual Effects
+
 - **Rotating**: Pending or selected pods
 - **Shaking**: Failed or CrashLoopBackOff pods
 - **Fade In**: New pods being created
@@ -418,6 +423,7 @@ docker-compose down
 ```
 
 The application includes:
+
 - **Multi-stage Dockerfiles** for optimized image size
 - **docker-compose.yml** for local orchestration
 - **nginx.conf** for optimized frontend serving
@@ -464,6 +470,7 @@ helm uninstall threek8s
 ```
 
 The Helm chart includes:
+
 - **RBAC**: ClusterRole and ClusterRoleBinding for Kubernetes API access
 - **Services**: LoadBalancer/ClusterIP services for frontend and backend
 - **ConfigMaps**: For application configuration
@@ -495,9 +502,9 @@ kind: ClusterRole
 metadata:
   name: threek8s-viewer
 rules:
-- apiGroups: [""]
-  resources: ["nodes", "pods", "namespaces"]
-  verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -508,9 +515,9 @@ roleRef:
   kind: ClusterRole
   name: threek8s-viewer
 subjects:
-- kind: ServiceAccount
-  name: threek8s
-  namespace: threek8s
+  - kind: ServiceAccount
+    name: threek8s
+    namespace: threek8s
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -529,15 +536,15 @@ spec:
     spec:
       serviceAccountName: threek8s
       containers:
-      - name: backend
-        image: ghcr.io/stianfro/threek8s/backend:1.0.0
-        ports:
-        - containerPort: 8080
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: PORT
-          value: "8080"
+        - name: backend
+          image: ghcr.io/stianfro/threek8s/backend:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "8080"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -555,15 +562,15 @@ spec:
         app: threek8s-frontend
     spec:
       containers:
-      - name: frontend
-        image: ghcr.io/stianfro/threek8s/frontend:1.0.0
-        ports:
-        - containerPort: 80
-        env:
-        - name: VITE_API_URL
-          value: "http://threek8s-backend:8080/api"
-        - name: VITE_WS_URL
-          value: "ws://threek8s-backend:8080/ws"
+        - name: frontend
+          image: ghcr.io/stianfro/threek8s/frontend:1.0.0
+          ports:
+            - containerPort: 80
+          env:
+            - name: VITE_API_URL
+              value: "http://threek8s-backend:8080/api"
+            - name: VITE_WS_URL
+              value: "ws://threek8s-backend:8080/ws"
 ---
 apiVersion: v1
 kind: Service
@@ -574,8 +581,8 @@ spec:
   selector:
     app: threek8s-backend
   ports:
-  - port: 8080
-    targetPort: 8080
+    - port: 8080
+      targetPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -587,11 +594,12 @@ spec:
   selector:
     app: threek8s-frontend
   ports:
-  - port: 80
-    targetPort: 80
+    - port: 80
+      targetPort: 80
 ```
 
 Apply the configuration:
+
 ```bash
 kubectl apply -f kubernetes/deployment.yaml
 kubectl get pods -n threek8s
@@ -605,6 +613,7 @@ kubectl get svc -n threek8s
 **Problem**: "Failed to connect to Kubernetes cluster"
 
 **Solutions**:
+
 1. Verify kubeconfig exists and is valid:
    ```bash
    kubectl cluster-info
@@ -621,6 +630,7 @@ kubectl get svc -n threek8s
 **Problem**: "WebSocket connection failed"
 
 **Solutions**:
+
 1. Verify backend is running:
    ```bash
    curl http://localhost:3001/api/health
@@ -634,6 +644,7 @@ kubectl get svc -n threek8s
 **Problem**: Visualization shows no pods
 
 **Solutions**:
+
 1. Verify pods exist:
    ```bash
    kubectl get pods --all-namespaces
@@ -650,6 +661,7 @@ kubectl get svc -n threek8s
 **Problem**: Low FPS or high memory usage
 
 **Solutions**:
+
 1. Use production builds:
    ```bash
    npm run build && npm start
@@ -663,11 +675,13 @@ kubectl get svc -n threek8s
 ### Optimization Tips
 
 1. **For Large Clusters (100+ nodes)**:
+
    - Use production builds
    - Increase WebSocket heartbeat interval
    - Consider implementing pagination
 
 2. **Browser Performance**:
+
    - Use Chrome or Firefox for best WebGL support
    - Enable hardware acceleration
    - Close unnecessary browser tabs
@@ -680,11 +694,11 @@ kubectl get svc -n threek8s
 ### Expected Performance
 
 | Cluster Size | Nodes | Pods | Target FPS | Memory |
-|-------------|-------|------|-----------|--------|
-| Small       | 10    | 100  | 60        | ~150MB |
-| Medium      | 50    | 500  | 60        | ~300MB |
-| Large       | 100   | 1000 | 45        | ~500MB |
-| X-Large     | 200   | 2000 | 30        | ~800MB |
+| ------------ | ----- | ---- | ---------- | ------ |
+| Small        | 10    | 100  | 60         | ~150MB |
+| Medium       | 50    | 500  | 60         | ~300MB |
+| Large        | 100   | 1000 | 45         | ~500MB |
+| X-Large      | 200   | 2000 | 30         | ~800MB |
 
 ## 🤝 Contributing
 
