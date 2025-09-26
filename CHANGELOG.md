@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.1](https://github.com/stianfro/threek8s/compare/v1.2.0...v1.2.1) (2025-09-26)
+
+
+### Bug Fixes
+
+* improve initial zoom and prevent node resizing after viewport setup ([#24](https://github.com/stianfro/threek8s/issues/24)) ([55803ef](https://github.com/stianfro/threek8s/commit/55803ef5c7e65de9a49a779531a77168daf28283))
+
+
+### Continuous Integration
+
+* remove frontend image smoke test from CI workflow ([#22](https://github.com/stianfro/threek8s/issues/22)) ([0a7b29f](https://github.com/stianfro/threek8s/commit/0a7b29f5ba3f7ef1cb556920b43770ba53ffffcb))
+
 ## [1.2.0](https://github.com/stianfro/threek8s/compare/v1.1.4...v1.2.0) (2025-09-26)
 
 
