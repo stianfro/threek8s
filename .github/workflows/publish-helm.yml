@@ -30,7 +30,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  CHART_NAME: chart
   CHART_PATH: ./helm/threek8s
 
 jobs:
