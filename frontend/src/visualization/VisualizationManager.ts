@@ -728,8 +728,27 @@ export class VisualizationManager {
   }
 
   public handleMouseMove(event: MouseEvent): void {
+    // T007 FIX: Ensure mouse coordinates are updated in SceneManager
+    this.sceneManager.handleMouseMove(event);
+
+    // T001 ANALYSIS: Current hover implementation issues:
+    // 1. Does not check for instanced pods (PodInstanceManager)
+    // 2. Includes nodes in raycasting but nodes have raycast disabled
+    // 3. No priority system for overlapping objects
+    // 4. Missing integration with PodInstanceManager.getRaycasterIntersections()
     const raycaster = this.sceneManager.getRaycaster();
 
+    // T008 FIX: Check instanced pods first if PodInstanceManager exists
+    if (this.podInstanceManager) {
+      const instancedPod = this.podInstanceManager.getRaycasterIntersections(raycaster);
+      if (instancedPod) {
+        // Show tooltip for instanced pod
+        this.showTooltipForPod(instancedPod, event.clientX, event.clientY);
+        return;
+      }
+    }
+
+    // Check regular pods (non-instanced) and nodes
     const allObjects: THREE.Object3D[] = [
       ...Array.from(this.nodes.values()),
       ...Array.from(this.pods.values())
@@ -738,9 +757,10 @@ export class VisualizationManager {
     const intersects = raycaster.intersectObjects(allObjects, true);
 
     if (intersects.length > 0) {
-      const object = this.findParentObject(intersects[0].object);
-      if (object) {
-        this.showTooltip(object, event.clientX, event.clientY);
+      // T015: Implement priority system - pods over nodes
+      const prioritizedObject = this.getPriorityHoverObject(intersects);
+      if (prioritizedObject) {
+        this.showTooltip(prioritizedObject, event.clientX, event.clientY);
       }
     } else {
       this.hideTooltip();
@@ -787,6 +807,37 @@ export class VisualizationManager {
         this.sceneManager.focusOnObject(object);
       }
     }
+  }
+
+  // T015: Priority resolver for hover detection
+  private getPriorityHoverObject(intersects: THREE.Intersection[]): NodeObject | PodObject | null {
+    // Group intersections by parent object type
+    const podIntersections: THREE.Intersection[] = [];
+    const nodeIntersections: THREE.Intersection[] = [];
+
+    for (const intersect of intersects) {
+      const parent = this.findParentObject(intersect.object);
+      if (parent instanceof PodObject) {
+        podIntersections.push(intersect);
+      } else if (parent instanceof NodeObject) {
+        // Only consider nodes that are marked as hoverable
+        if (intersect.object.userData?.hoverable) {
+          nodeIntersections.push(intersect);
+        }
+      }
+    }
+
+    // Pods have priority over nodes
+    if (podIntersections.length > 0) {
+      return this.findParentObject(podIntersections[0].object);
+    }
+
+    // If no pods, return closest node
+    if (nodeIntersections.length > 0) {
+      return this.findParentObject(nodeIntersections[0].object);
+    }
+
+    return null;
   }
 
   private findParentObject(object: THREE.Object3D): NodeObject | PodObject | null {
@@ -870,6 +921,47 @@ export class VisualizationManager {
         </div>
       `;
     }
+
+    tooltip.innerHTML = content;
+    tooltip.style.display = 'block';
+    tooltip.style.left = `${x + 10}px`;
+    tooltip.style.top = `${y + 10}px`;
+  }
+
+  private showTooltipForPod(pod: Pod, x: number, y: number): void {
+    const tooltip = document.getElementById('tooltip');
+    if (!tooltip) return;
+
+    const containerInfo = pod.containers
+      .map(c => `${c.name} (${c.state})`)
+      .join(', ');
+
+    const content = `
+      <div class="tooltip-title">Pod: ${pod.name}</div>
+      <div class="tooltip-content">
+        <div class="tooltip-row">
+          <span class="tooltip-label">Namespace:</span>
+          <span class="tooltip-value">${pod.namespace}</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">Status:</span>
+          <span class="tooltip-value">${pod.status}</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">Node:</span>
+          <span class="tooltip-value">${pod.nodeName}</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">Containers:</span>
+          <span class="tooltip-value">${containerInfo}</span>
+        </div>
+        ${pod.ip ? `
+        <div class="tooltip-row">
+          <span class="tooltip-label">IP:</span>
+          <span class="tooltip-value">${pod.ip}</span>
+        </div>` : ''}
+      </div>
+    `;
 
     tooltip.innerHTML = content;
     tooltip.style.display = 'block';

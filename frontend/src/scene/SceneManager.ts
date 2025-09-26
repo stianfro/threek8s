@@ -100,7 +100,9 @@ export class SceneManager {
 
   private setupEventListeners(): void {
     window.addEventListener('resize', this.handleResize.bind(this));
-    this.renderer.domElement.addEventListener('mousemove', this.handleMouseMove.bind(this));
+    // T007 FIX: Removed duplicate mousemove listener
+    // Mouse events are handled in main.ts on viewport element
+    // this.renderer.domElement.addEventListener('mousemove', this.handleMouseMove.bind(this));
     this.renderer.domElement.addEventListener('click', this.handleClick.bind(this));
     this.renderer.domElement.addEventListener('dblclick', this.handleDoubleClick.bind(this));
   }
@@ -115,7 +117,7 @@ export class SceneManager {
     this.renderer.setSize(width, height);
   }
 
-  private handleMouseMove(event: MouseEvent): void {
+  public handleMouseMove(event: MouseEvent): void {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
