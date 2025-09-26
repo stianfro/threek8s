@@ -14,10 +14,10 @@ export class LODManager {
 
   // Distance thresholds for different detail levels
   private readonly thresholds = {
-    high: 150,    // Closer than 150 units
-    medium: 300,  // 150-300 units
-    low: 500,     // 300-500 units
-    minimal: Infinity // Beyond 500 units
+    high: 250,    // Closer than 250 units (increased from 150)
+    medium: 450,  // 250-450 units (increased from 300)
+    low: 750,     // 450-750 units (increased from 500)
+    minimal: Infinity // Beyond 750 units
   };
 
   constructor(camera: THREE.Camera) {
