@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/stianfro/threek8s/compare/v1.1.4...v1.2.0) (2025-09-26)
+
+
+### Features
+
+* optimize initial zoom and LOD thresholds for better visibility ([#20](https://github.com/stianfro/threek8s/issues/20)) ([6881552](https://github.com/stianfro/threek8s/commit/6881552790c6f46f9df653f931bfc10831294712))
+
 ## [1.1.4](https://github.com/stianfro/threek8s/compare/v1.1.3...v1.1.4) (2025-09-25)
 
 
