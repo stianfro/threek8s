@@ -17,6 +17,9 @@ export class VisualizationManager {
   private lastUpdateTime: number = Date.now();
   private isInitialized: boolean = false;
   private lastLayout: { positions: THREE.Vector3[], scale: number } | null = null;
+  private initialZoomApplied: boolean = false;
+  private layoutLocked: boolean = false;
+  private referenceViewport: { width: number; height: number } | null = null;
   private podInstanceManager: PodInstanceManager | null = null;
   private useInstancedRendering: boolean = true;
   private geometryPool: GeometryPool;
@@ -50,14 +53,18 @@ export class VisualizationManager {
       return;
     }
 
-    // Recalculate layout and update all nodes
+    // On actual window resize, we need to recalculate the reference viewport
     if (this.nodes.size > 0) {
+      // Reset reference viewport to recalculate based on new window size
+      const oldViewport = this.referenceViewport;
+      this.referenceViewport = null;
+
       const nodeCount = this.nodes.size;
       const layout = this.calculateLayout(nodeCount);
 
-      // Only animate if layout actually changed significantly
+      // Check if the layout has changed significantly
       if (this.hasLayoutChanged(layout)) {
-        // Update node positions using the same layout calculation
+        // Update node positions using the new layout
         let index = 0;
         this.nodes.forEach((node) => {
           this.animateNodePosition(node, layout.positions[index]);
@@ -66,7 +73,13 @@ export class VisualizationManager {
         });
 
         this.lastLayout = layout;
-        this.adjustCameraForContent();
+        // Adjust camera after resize
+        if (this.initialZoomApplied) {
+          this.adjustCameraForContent();
+        }
+      } else {
+        // Restore old viewport if no significant change
+        this.referenceViewport = oldViewport;
       }
     }
   }
@@ -100,12 +113,24 @@ export class VisualizationManager {
   private updateNodes(nodes: KubernetesNode[]): void {
     const currentNodeIds = new Set(nodes.map(n => n.uid));
 
-    // Calculate the complete layout first
-    const layout = this.calculateLayout(nodes.length);
-    this.lastLayout = layout;
-
     // Track if this is initial setup
     const isInitialSetup = this.nodes.size === 0;
+
+    // Check if node count has changed
+    const nodeCountChanged = this.nodes.size !== nodes.length;
+
+    // Only recalculate layout if it's initial setup, node count changed, or layout isn't locked
+    let layout = this.lastLayout;
+    if (!layout || isInitialSetup || (nodeCountChanged && !this.layoutLocked)) {
+      layout = this.calculateLayout(nodes.length);
+      this.lastLayout = layout;
+
+      // Lock layout after initial setup
+      if (isInitialSetup && nodes.length > 0) {
+        this.layoutLocked = true;
+      }
+    } else {
+    }
 
     nodes.forEach((nodeData, index) => {
       let node = this.nodes.get(nodeData.uid);
@@ -129,15 +154,17 @@ export class VisualizationManager {
         }
       } else {
         node.updateNode(nodeData);
-        // Only animate if not initial setup
-        if (!isInitialSetup) {
-          // Update existing node position and scale with animation
-          this.animateNodePosition(node, layout.positions[index]);
-          this.animateNodeScale(node, layout.scale);
-        } else {
-          // Initial setup - set positions immediately without animation
-          node.position.copy(layout.positions[index]);
-          node.scale.setScalar(layout.scale);
+        // Only animate if layout has actually changed
+        const scaleChanged = Math.abs(node.scale.x - layout.scale) > 0.01;
+        const positionChanged = node.position.distanceTo(layout.positions[index]) > 0.1;
+
+        if (scaleChanged || positionChanged) {
+          if (positionChanged) {
+            this.animateNodePosition(node, layout.positions[index]);
+          }
+          if (scaleChanged) {
+            this.animateNodeScale(node, layout.scale);
+          }
         }
       }
     });
@@ -158,7 +185,10 @@ export class VisualizationManager {
     }
 
     // Don't call layoutNodes here - we've already applied the layout
-    this.adjustCameraForContent();
+    // Only adjust camera if initial zoom hasn't been applied yet
+    if (!this.initialZoomApplied) {
+      this.adjustCameraForContent();
+    }
   }
 
   private checkAndInitializeInstancedRendering(): void {
@@ -281,19 +311,22 @@ export class VisualizationManager {
     this.podInstanceManager.updatePods(pods, getPositionForPod);
   }
 
-  private calculateVisibleArea(): { width: number; height: number } {
-    const camera = this.sceneManager.getCamera();
-    const distance = camera.position.y; // Top-down view
-    const vFov = (camera.fov * Math.PI) / 180;
-    const height = 2 * Math.tan(vFov / 2) * distance;
-    const width = height * camera.aspect;
-    return { width: width * 0.8, height: height * 0.8 }; // Use 80% of visible area for margins
-  }
 
 
   private calculateLayout(nodeCount: number): { positions: THREE.Vector3[], scale: number } {
-    // Get actual visible viewport area
-    const viewport = this.calculateVisibleArea();
+    // Use reference viewport for consistent sizing
+    // If we haven't stored a reference viewport, calculate one at standard distance
+    if (!this.referenceViewport) {
+      // Calculate viewport at standard camera distance of 100 units
+      const standardDistance = 100;
+      const camera = this.sceneManager.getCamera();
+      const vFov = (camera.fov * Math.PI) / 180;
+      const height = 2 * Math.tan(vFov / 2) * standardDistance;
+      const width = height * camera.aspect;
+      this.referenceViewport = { width: width * 0.8, height: height * 0.8 };
+    }
+
+    const viewport = this.referenceViewport;
     const aspectRatio = viewport.width / viewport.height;
 
     // Calculate optimal grid dimensions
@@ -448,41 +481,58 @@ export class VisualizationManager {
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
 
-    // Calculate optimal camera distance to see all content with some padding
+    // Calculate optimal camera distance to see all content with proper padding
     const maxDimension = Math.max(size.x, size.z);
     const fov = this.sceneManager.getCamera().fov * (Math.PI / 180);
-    const optimalDistance = (maxDimension * 1.1) / (2 * Math.tan(fov / 2)); // Reduced from 1.2 for tighter fit
 
-    // Adaptive camera height based on node count
-    let minHeight: number;
-    let maxHeight: number;
+    // Adjust multiplier to ensure nodes fill 80-90% of viewport
+    // Using 0.65 for ~85% viewport fill
+    const optimalDistance = (maxDimension * 0.65) / (2 * Math.tan(fov / 2));
 
-    if (nodeArray.length <= 10) {
-      minHeight = 50;
-      maxHeight = 150;
-    } else if (nodeArray.length <= 50) {
-      minHeight = 80;
-      maxHeight = 300;
-    } else {
-      // Large clusters need more distance
-      minHeight = 100;
-      maxHeight = 500;
+
+    // For initial zoom, use the calculated optimal distance directly
+    let targetHeight = optimalDistance;
+
+    // Only apply min/max constraints after initial zoom
+    if (this.initialZoomApplied) {
+      // Adaptive camera height based on node count
+      let minHeight: number;
+      let maxHeight: number;
+
+      if (nodeArray.length <= 10) {
+        minHeight = 30;
+        maxHeight = 150;
+      } else if (nodeArray.length <= 50) {
+        minHeight = 50;
+        maxHeight = 300;
+      } else {
+        // Large clusters need more distance
+        minHeight = 100;
+        maxHeight = 500;
+      }
+
+      targetHeight = Math.max(minHeight, Math.min(maxHeight, optimalDistance));
     }
-
-    const targetHeight = Math.max(minHeight, Math.min(maxHeight, optimalDistance));
 
     // Smoothly adjust camera position
     const camera = this.sceneManager.getCamera();
     const currentHeight = camera.position.y;
 
-    // Only adjust if significantly different (avoid minor adjustments)
-    if (Math.abs(currentHeight - targetHeight) > 5) {
+
+    // Force adjustment on initial load, or adjust if significantly different
+    if (!this.initialZoomApplied || Math.abs(currentHeight - targetHeight) > 2) {
       camera.position.set(center.x, targetHeight, center.z + 0.001);
       camera.lookAt(center.x, 0, center.z);
 
       // Update controls target
       this.sceneManager.getControls().target.set(center.x, 0, center.z);
       this.sceneManager.getControls().update();
+
+      // Mark initial zoom as applied
+      if (!this.initialZoomApplied) {
+        this.initialZoomApplied = true;
+      }
+    } else {
     }
   }
 
