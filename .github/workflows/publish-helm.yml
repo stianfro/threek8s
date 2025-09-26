@@ -80,31 +80,36 @@ jobs:
       - name: Determine versions
         id: version
         run: |
-          # Determine chart version
+          # Get current versions from Chart.yaml
+          CURRENT_CHART_VERSION=$(grep '^version:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}')
+          CURRENT_APP_VERSION=$(grep '^appVersion:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}' | tr -d '"')
+
+          # Determine chart version based on trigger
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.event_name }}" == "workflow_call" ]]; then
             CHART_VERSION="${{ inputs.chart_version }}"
             APP_VERSION="${{ inputs.app_version }}"
           elif [[ "${{ github.ref }}" == refs/tags/chart-v* ]]; then
             # Chart-specific tag
             CHART_VERSION="${GITHUB_REF#refs/tags/chart-}"
-            APP_VERSION=$(grep '^appVersion:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}' | tr -d '"')
+            APP_VERSION="$CURRENT_APP_VERSION"
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             # Regular version tag - update both
             VERSION="${GITHUB_REF#refs/tags/}"
             CHART_VERSION="${VERSION#v}"
             APP_VERSION="${VERSION#v}"
-          else
+          elif [[ "${{ github.event_name }}" == "release" ]]; then
             # Release event
             VERSION="${{ github.event.release.tag_name }}"
             CHART_VERSION="${VERSION#v}"
             APP_VERSION="${VERSION#v}"
+          else
+            # Default: use existing versions from Chart.yaml (e.g., for push to main)
+            CHART_VERSION="$CURRENT_CHART_VERSION"
+            APP_VERSION="$CURRENT_APP_VERSION"
           fi
 
           # Update Chart.yaml if versions differ
-          CURRENT_CHART_VERSION=$(grep '^version:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}')
-          CURRENT_APP_VERSION=$(grep '^appVersion:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}' | tr -d '"')
-
-          if [[ "$CHART_VERSION" != "$CURRENT_CHART_VERSION" ]]; then
+          if [[ -n "$CHART_VERSION" ]] && [[ "$CHART_VERSION" != "$CURRENT_CHART_VERSION" ]]; then
             sed -i "s/^version:.*/version: $CHART_VERSION/" ${{ env.CHART_PATH }}/Chart.yaml
           fi
 
@@ -112,7 +117,7 @@ jobs:
             sed -i "s/^appVersion:.*/appVersion: \"$APP_VERSION\"/" ${{ env.CHART_PATH }}/Chart.yaml
           fi
 
-          echo "chart_version=$CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "chart_version=${CHART_VERSION:-$CURRENT_CHART_VERSION}" >> $GITHUB_OUTPUT
           echo "app_version=${APP_VERSION:-$CURRENT_APP_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Update dependencies
