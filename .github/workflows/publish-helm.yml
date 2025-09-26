@@ -164,11 +164,11 @@ jobs:
           CHART_VERSION="${{ needs.package.outputs.chart_version }}"
 
           # Push to OCI registry
-          helm push $CHART_FILE oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s
+          helm push $CHART_FILE oci://${{ env.REGISTRY }}/${{ github.repository_owner }}
 
       - name: Verify chart in registry
         run: |
-          helm show chart oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s/chart --version ${{ needs.package.outputs.chart_version }}
+          helm show chart oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s --version ${{ needs.package.outputs.chart_version }}
 
   create-release:
     needs: [package, publish-oci]
@@ -200,15 +200,15 @@ jobs:
 
             ```bash
             # Install from OCI registry
-            helm install threek8s oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s/chart --version ${{ needs.package.outputs.chart_version }}
+            helm install threek8s oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s --version ${{ needs.package.outputs.chart_version }}
 
             # Install with custom values
-            helm install threek8s oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s/chart --version ${{ needs.package.outputs.chart_version }} -f my-values.yaml
+            helm install threek8s oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s --version ${{ needs.package.outputs.chart_version }} -f my-values.yaml
             ```
 
             ### Upgrade
 
             ```bash
-            helm upgrade threek8s oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s/chart --version ${{ needs.package.outputs.chart_version }}
+            helm upgrade threek8s oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/threek8s --version ${{ needs.package.outputs.chart_version }}
             ```
           generate_release_notes: true
