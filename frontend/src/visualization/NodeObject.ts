@@ -25,8 +25,11 @@ export class NodeObject extends THREE.Group {
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
-    // Make node mesh completely ignore raycasting so pods inside can be hovered
-    this.mesh.raycast = () => {};
+    // T012 FIX: Re-enable raycasting for nodes
+    // Use userData to identify as hoverable node with lower priority than pods
+    this.mesh.userData.hoverable = true;
+    this.mesh.userData.type = 'node';
+    this.mesh.userData.nodeData = node;
     this.mesh.renderOrder = -1;
     this.add(this.mesh);
 
@@ -39,14 +42,14 @@ export class NodeObject extends THREE.Group {
       opacity: 0.8
     });
     this.edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-    // Make edges ignore raycasting too
+    // Keep edges non-hoverable to avoid interference
     this.edges.raycast = () => {};
     this.add(this.edges);
 
     const outlineGeometry = this.geometryPool.getNodeOutlineGeometry();
     const outlineMaterial = this.geometryPool.getNodeOutlineMaterial(color);
     this.outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
-    // Make outline ignore raycasting
+    // Keep outline non-hoverable to avoid interference
     this.outline.raycast = () => {};
     this.add(this.outline);
 
@@ -97,6 +100,54 @@ export class NodeObject extends THREE.Group {
 
   public getNode(): KubernetesNode {
     return this.node;
+  }
+
+  // T013: Add tooltip data provider for nodes
+  public getTooltipData(): any {
+    const node = this.node;
+    const podCount = this.children.filter(child =>
+      child.userData?.type === 'pod' || child instanceof Object3D && child.userData?.type === 'pod'
+    ).length;
+
+    return {
+      type: 'node',
+      name: node.name,
+      status: node.status,
+      role: node.role || 'worker',
+      capacity: {
+        cpu: node.capacity?.cpu || 'N/A',
+        memory: node.capacity?.memory || 'N/A'
+      },
+      allocatable: {
+        cpu: node.allocatable?.cpu || 'N/A',
+        memory: node.allocatable?.memory || 'N/A'
+      },
+      podCount: podCount,
+      maxPods: node.capacity?.pods || 110,
+      os: node.nodeInfo?.osImage || 'linux',
+      kernelVersion: node.nodeInfo?.kernelVersion || 'N/A',
+      kubeletVersion: node.kubeletVersion || 'N/A',
+      containerRuntime: node.nodeInfo?.containerRuntimeVersion || 'N/A',
+      age: this.formatAge(node.creationTimestamp)
+    };
+  }
+
+  private formatAge(timestamp?: string): string {
+    if (!timestamp) return 'N/A';
+    const created = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - created.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else {
+      const minutes = Math.floor(diff / (1000 * 60));
+      return `${minutes}m`;
+    }
   }
 
   public animate(deltaTime: number): void {
