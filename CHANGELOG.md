@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.2](https://github.com/stianfro/threek8s/compare/v1.2.1...v1.2.2) (2025-09-26)
+
+
+### Bug Fixes
+
+* potential fix for code scanning alert no. 2: Use of externally-controlled format string ([#9](https://github.com/stianfro/threek8s/issues/9)) ([4144fd0](https://github.com/stianfro/threek8s/commit/4144fd02894687dc687bb769eb7f281ea6c02dc6))
+* potential fix for code scanning alert no. 3: Use of externally-controlled format string ([#8](https://github.com/stianfro/threek8s/issues/8)) ([9f36ad5](https://github.com/stianfro/threek8s/commit/9f36ad559af0d1dcb1c2b8dac2b138d2404df0fe))
+
+
+### Build System
+
+* fix Helm chart publication path from threek8s/chart/threek8s to threek8s/threek8s ([#26](https://github.com/stianfro/threek8s/issues/26)) ([9d2d534](https://github.com/stianfro/threek8s/commit/9d2d53423fa8733fc05a6d1d26fc79e198cb176d))
+
 ## [1.2.1](https://github.com/stianfro/threek8s/compare/v1.2.0...v1.2.1) (2025-09-26)
 
 
