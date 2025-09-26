@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/stianfro/threek8s/compare/v1.2.2...v1.2.3) (2025-09-26)
+
+
+### Bug Fixes
+
+* restore pod hover and add node hover functionality ([#28](https://github.com/stianfro/threek8s/issues/28)) ([86d46ff](https://github.com/stianfro/threek8s/commit/86d46ff4fa832d4829357fefb108325917d6cf1a))
+
 ## [1.2.2](https://github.com/stianfro/threek8s/compare/v1.2.1...v1.2.2) (2025-09-26)
 
 
