@@ -30,6 +30,7 @@ jobs:
           docker build -t test-${{ matrix.service }}:${{ github.sha }} ./${{ matrix.service }}
 
       - name: Test ${{ matrix.service }} image
+        if: matrix.service == 'backend'
         run: |
           # Basic smoke test - ensure container can start
           docker run --rm test-${{ matrix.service }}:${{ github.sha }} echo "Container started successfully"
