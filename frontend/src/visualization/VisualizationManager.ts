@@ -451,7 +451,7 @@ export class VisualizationManager {
     // Calculate optimal camera distance to see all content with some padding
     const maxDimension = Math.max(size.x, size.z);
     const fov = this.sceneManager.getCamera().fov * (Math.PI / 180);
-    const optimalDistance = (maxDimension * 1.2) / (2 * Math.tan(fov / 2));
+    const optimalDistance = (maxDimension * 1.1) / (2 * Math.tan(fov / 2)); // Reduced from 1.2 for tighter fit
 
     // Adaptive camera height based on node count
     let minHeight: number;

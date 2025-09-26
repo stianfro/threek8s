@@ -53,7 +53,7 @@ export class SceneManager {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.minDistance = 20;  // Allow closer zoom
-    controls.maxDistance = 300; // Allow further zoom out for large clusters
+    controls.maxDistance = 500; // Increased from 300 for better large cluster view
     // Lock to top-down view
     controls.minPolarAngle = 0; // 0 degrees (straight down)
     controls.maxPolarAngle = 0.1; // Nearly straight down

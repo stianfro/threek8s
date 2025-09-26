@@ -1,0 +1,206 @@
+openapi: 3.0.0
+info:
+  title: Viewport Configuration API
+  version: 1.0.0
+  description: Configuration endpoints for camera zoom and LOD thresholds
+
+paths:
+  /api/viewport/config:
+    get:
+      summary: Get current viewport configuration
+      operationId: getViewportConfig
+      tags:
+        - Viewport
+      responses:
+        '200':
+          description: Current viewport configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewportConfig'
+              example:
+                camera:
+                  viewportFillRatio: 0.85
+                  paddingMultiplier: 1.1
+                  maxDistance: 500
+                lod:
+                  thresholds:
+                    high: 250
+                    medium: 450
+                    low: 750
+                metrics:
+                  nodeCount: 5
+                  currentLOD: "high"
+                  cameraDistance: 120
+
+  /api/viewport/metrics:
+    get:
+      summary: Get real-time viewport metrics
+      operationId: getViewportMetrics
+      tags:
+        - Viewport
+      responses:
+        '200':
+          description: Current viewport metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewportMetrics'
+              example:
+                dimensions:
+                  width: 1920
+                  height: 1080
+                  aspectRatio: 1.777
+                cluster:
+                  nodeCount: 5
+                  podCount: 47
+                  boundingBox:
+                    size:
+                      x: 80
+                      y: 20
+                      z: 60
+                camera:
+                  distance: 120
+                  fov: 60
+                  visibleArea:
+                    width: 138.56
+                    height: 77.94
+                performance:
+                  fps: 60
+                  renderTime: 8.5
+                  lodLevel: "high"
+                  visibleObjects: 52
+
+components:
+  schemas:
+    ViewportConfig:
+      type: object
+      required:
+        - camera
+        - lod
+      properties:
+        camera:
+          type: object
+          properties:
+            viewportFillRatio:
+              type: number
+              minimum: 0.7
+              maximum: 0.95
+              description: Target ratio of viewport to be filled by content
+            paddingMultiplier:
+              type: number
+              minimum: 1.0
+              maximum: 1.5
+              description: Multiplier for padding around content
+            minDistance:
+              type: number
+              minimum: 10
+              description: Minimum camera distance
+            maxDistance:
+              type: number
+              maximum: 1000
+              description: Maximum camera distance
+        lod:
+          type: object
+          properties:
+            thresholds:
+              type: object
+              properties:
+                high:
+                  type: number
+                  description: Distance threshold for high detail
+                medium:
+                  type: number
+                  description: Distance threshold for medium detail
+                low:
+                  type: number
+                  description: Distance threshold for low detail
+        metrics:
+          type: object
+          properties:
+            nodeCount:
+              type: integer
+              description: Current number of nodes
+            currentLOD:
+              type: string
+              enum: [high, medium, low, minimal]
+              description: Current LOD level
+            cameraDistance:
+              type: number
+              description: Current camera distance from center
+
+    ViewportMetrics:
+      type: object
+      required:
+        - dimensions
+        - cluster
+        - camera
+        - performance
+      properties:
+        dimensions:
+          type: object
+          properties:
+            width:
+              type: number
+              description: Viewport width in pixels
+            height:
+              type: number
+              description: Viewport height in pixels
+            aspectRatio:
+              type: number
+              description: Width/height ratio
+        cluster:
+          type: object
+          properties:
+            nodeCount:
+              type: integer
+              description: Number of nodes in cluster
+            podCount:
+              type: integer
+              description: Number of pods in cluster
+            boundingBox:
+              type: object
+              properties:
+                size:
+                  type: object
+                  properties:
+                    x:
+                      type: number
+                    y:
+                      type: number
+                    z:
+                      type: number
+        camera:
+          type: object
+          properties:
+            distance:
+              type: number
+              description: Camera distance from target
+            fov:
+              type: number
+              description: Field of view in degrees
+            visibleArea:
+              type: object
+              properties:
+                width:
+                  type: number
+                  description: Visible width at target distance
+                height:
+                  type: number
+                  description: Visible height at target distance
+        performance:
+          type: object
+          properties:
+            fps:
+              type: number
+              description: Current frames per second
+            renderTime:
+              type: number
+              description: Render time in milliseconds
+            lodLevel:
+              type: string
+              enum: [high, medium, low, minimal]
+              description: Current LOD level
+            visibleObjects:
+              type: integer
+              description: Number of visible objects
