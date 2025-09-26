@@ -106,7 +106,7 @@ export class NodeObject extends THREE.Group {
   public getTooltipData(): any {
     const node = this.node;
     const podCount = this.children.filter(child =>
-      child.userData?.type === 'pod' || child instanceof Object3D && child.userData?.type === 'pod'
+      child.userData?.type === 'pod' || child instanceof THREE.Object3D && child.userData?.type === 'pod'
     ).length;
 
     return {
@@ -123,11 +123,11 @@ export class NodeObject extends THREE.Group {
         memory: node.allocatable?.memory || 'N/A'
       },
       podCount: podCount,
-      maxPods: node.capacity?.pods || 110,
-      os: node.nodeInfo?.osImage || 'linux',
-      kernelVersion: node.nodeInfo?.kernelVersion || 'N/A',
+      maxPods: parseInt(node.capacity?.pods || '110'),
+      os: node.operatingSystem || 'linux',
+      kernelVersion: node.architecture || 'N/A',
       kubeletVersion: node.kubeletVersion || 'N/A',
-      containerRuntime: node.nodeInfo?.containerRuntimeVersion || 'N/A',
+      containerRuntime: node.containerRuntimeVersion || 'N/A',
       age: this.formatAge(node.creationTimestamp)
     };
   }
