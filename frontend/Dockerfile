@@ -2,12 +2,15 @@
 # Optimized for amd64 architecture
 
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS builder
 
 WORKDIR /app
 
 # Install build dependencies for native modules if needed
-RUN apk add --no-cache \
+# Update vulnerable packages first
+RUN apk update && \
+    apk upgrade --no-cache && \
+    apk add --no-cache \
     python3 \
     make \
     g++ \
@@ -27,10 +30,13 @@ COPY . .
 RUN npm run build
 
 # Runtime stage with nginx
-FROM nginx:alpine AS runtime
+FROM nginx:alpine@sha256:42a516af16b852e33b7682d5ef8acbd5d13fe08fecadc7ed98605ba5e3b26ab8 AS runtime
 
 # Install dependencies for runtime and healthcheck
-RUN apk add --no-cache \
+# Update vulnerable packages first
+RUN apk update && \
+    apk upgrade --no-cache && \
+    apk add --no-cache \
     curl \
     gettext \
     && rm -rf /var/cache/apk/*

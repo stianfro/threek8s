@@ -2,13 +2,16 @@
 # Optimized for amd64 architecture
 
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Install build dependencies for native modules if needed
-RUN apk add --no-cache python3 make g++
+# Update vulnerable packages first
+RUN apk update && \
+    apk upgrade --no-cache && \
+    apk add --no-cache python3 make g++
 
 # Copy package files for dependency installation
 COPY package*.json ./
@@ -23,13 +26,16 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:20-alpine@sha256:eabac870db94f7342d6c33560d6613f188bbcf4bbe1f4eb47d5e2a08e1a37722 AS production
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies for runtime and health checks
-RUN apk add --no-cache \
+# Update vulnerable packages first
+RUN apk update && \
+    apk upgrade --no-cache && \
+    apk add --no-cache \
     dumb-init \
     curl \
     tini
