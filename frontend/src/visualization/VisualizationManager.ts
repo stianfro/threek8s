@@ -915,11 +915,6 @@ export class VisualizationManager {
     return null;
   }
 
-  private clearSelection(): void {
-    this.nodes.forEach(node => node.setSelected(false));
-    this.pods.forEach(pod => pod.setSelected(false));
-  }
-
   private showTooltip(object: NodeObject | PodObject, x: number, y: number): void {
     const tooltip = document.getElementById('tooltip');
     if (!tooltip) return;
