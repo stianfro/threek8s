@@ -34,6 +34,7 @@ export class KubernetesService extends EventEmitter {
     } else if (kubeconfigPath) {
       // Sanitize and validate the path to prevent path injection
       const resolvedPath = this.sanitizeKubeconfigPath(kubeconfigPath);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
         console.log(`KubernetesService: Loading config from file: ${resolvedPath}`);
         this.kubeConfig.loadFromFile(resolvedPath);
@@ -63,10 +64,12 @@ export class KubernetesService extends EventEmitter {
     // Ensure the resolved path starts with home directory or /etc or /tmp (common kubeconfig locations)
     const homeDir = os.homedir();
     const allowedPrefixes = [homeDir, "/etc/kubernetes", "/tmp"];
-    const isAllowed = allowedPrefixes.some(prefix => resolvedPath.startsWith(prefix));
+    const isAllowed = allowedPrefixes.some((prefix) => resolvedPath.startsWith(prefix));
 
     if (!isAllowed) {
-      throw new Error(`Invalid kubeconfig path: must be within allowed directories (home, /etc/kubernetes, /tmp)`);
+      throw new Error(
+        `Invalid kubeconfig path: must be within allowed directories (home, /etc/kubernetes, /tmp)`,
+      );
     }
 
     return resolvedPath;
