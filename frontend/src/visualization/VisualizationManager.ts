@@ -5,6 +5,8 @@ import { PodObject } from './PodObject';
 import { PodInstanceManager } from './PodInstanceManager';
 import { GeometryPool } from './GeometryPool';
 import { LODManager, DetailLevel } from './LODManager';
+import { ZoneManager } from './ZoneManager';
+import type { ZoneLayout } from './ZoneManager';
 import type { KubernetesNode, Pod, ClusterState } from '../types/kubernetes';
 
 export class VisualizationManager {
@@ -14,9 +16,11 @@ export class VisualizationManager {
   private pods: Map<string, PodObject> = new Map();
   private nodeGroup: THREE.Group;
   private podGroup: THREE.Group;
+  private zoneBordersGroup: THREE.Group;
+  private zoneLabelsGroup: THREE.Group;
   private lastUpdateTime: number = Date.now();
   private isInitialized: boolean = false;
-  private lastLayout: { positions: THREE.Vector3[], scale: number } | null = null;
+  private lastLayout: ZoneLayout | null = null;
   private initialZoomApplied: boolean = false;
   private layoutLocked: boolean = false;
   private referenceViewport: { width: number; height: number } | null = null;
@@ -26,6 +30,7 @@ export class VisualizationManager {
   private frustum: THREE.Frustum = new THREE.Frustum();
   private cameraMatrix: THREE.Matrix4 = new THREE.Matrix4();
   private lodManager: LODManager;
+  private zoneManager: ZoneManager | null = null;
 
   constructor(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
@@ -39,6 +44,14 @@ export class VisualizationManager {
     this.podGroup = new THREE.Group();
     this.podGroup.name = 'pods';
     this.sceneManager.addObject(this.podGroup);
+
+    this.zoneBordersGroup = new THREE.Group();
+    this.zoneBordersGroup.name = 'zoneBorders';
+    this.sceneManager.addObject(this.zoneBordersGroup);
+
+    this.zoneLabelsGroup = new THREE.Group();
+    this.zoneLabelsGroup.name = 'zoneLabels';
+    this.sceneManager.addObject(this.zoneLabelsGroup);
 
     // Initialize instanced rendering for pods if we have many of them
     this.checkAndInitializeInstancedRendering();
@@ -59,18 +72,18 @@ export class VisualizationManager {
       const oldViewport = this.referenceViewport;
       this.referenceViewport = null;
 
-      const nodeCount = this.nodes.size;
-      const layout = this.calculateLayout(nodeCount);
+      // Initialize zone manager if needed
+      if (!this.zoneManager) {
+        this.initializeZoneManager();
+      }
+
+      const nodesArray = Array.from(this.nodes.values()).map(n => n.getNode());
+      const layout = this.zoneManager!.calculateZoneLayout(nodesArray);
 
       // Check if the layout has changed significantly
       if (this.hasLayoutChanged(layout)) {
         // Update node positions using the new layout
-        let index = 0;
-        this.nodes.forEach((node) => {
-          this.animateNodePosition(node, layout.positions[index]);
-          this.animateNodeScale(node, layout.scale);
-          index++;
-        });
+        this.applyZoneLayout(layout);
 
         this.lastLayout = layout;
         // Adjust camera after resize
@@ -84,18 +97,28 @@ export class VisualizationManager {
     }
   }
 
-  private hasLayoutChanged(newLayout: { positions: THREE.Vector3[], scale: number }): boolean {
+  private hasLayoutChanged(newLayout: ZoneLayout): boolean {
     if (!this.lastLayout) return true;
 
-    // Check if scale changed significantly
-    if (Math.abs(this.lastLayout.scale - newLayout.scale) > 0.01) return true;
+    // Check if zone count changed
+    if (this.lastLayout.zones.length !== newLayout.zones.length) return true;
 
-    // Check if any position changed significantly
-    for (let i = 0; i < newLayout.positions.length; i++) {
-      if (!this.lastLayout.positions[i]) return true;
-      if (this.lastLayout.positions[i].distanceTo(newLayout.positions[i]) > 0.1) {
-        return true;
-      }
+    // Check if any zone's position or size changed significantly
+    for (let i = 0; i < newLayout.zones.length; i++) {
+      const oldZone = this.lastLayout.zones[i];
+      const newZone = newLayout.zones[i];
+
+      if (!oldZone) return true;
+
+      // Check zone position
+      if (oldZone.position.distanceTo(newZone.position) > 0.1) return true;
+
+      // Check zone size
+      if (Math.abs(oldZone.size.width - newZone.size.width) > 0.1) return true;
+      if (Math.abs(oldZone.size.height - newZone.size.height) > 0.1) return true;
+
+      // Check node scale
+      if (Math.abs(oldZone.nodeScale - newZone.nodeScale) > 0.01) return true;
     }
 
     return false;
@@ -110,6 +133,133 @@ export class VisualizationManager {
     this.updatePods(state.pods);
   }
 
+  private initializeZoneManager(): void {
+    // Use reference viewport for consistent sizing
+    if (!this.referenceViewport) {
+      const standardDistance = 100;
+      const camera = this.sceneManager.getCamera();
+      const vFov = (camera.fov * Math.PI) / 180;
+      const height = 2 * Math.tan(vFov / 2) * standardDistance;
+      const width = height * camera.aspect;
+      this.referenceViewport = { width: width * 0.8, height: height * 0.8 };
+    }
+
+    this.zoneManager = new ZoneManager(this.referenceViewport);
+  }
+
+  private applyZoneLayout(layout: ZoneLayout): void {
+    // Create a map of node UID to its position and scale in the zone layout
+    const nodePositionMap = new Map<string, { position: THREE.Vector3; scale: number }>();
+
+    layout.zones.forEach(zone => {
+      zone.nodes.forEach((nodeData, index) => {
+        nodePositionMap.set(nodeData.uid, {
+          position: zone.nodePositions[index],
+          scale: zone.nodeScale
+        });
+      });
+    });
+
+    // Apply positions and scales to all nodes
+    this.nodes.forEach((nodeObj, uid) => {
+      const layoutInfo = nodePositionMap.get(uid);
+      if (layoutInfo) {
+        this.animateNodePosition(nodeObj, layoutInfo.position);
+        this.animateNodeScale(nodeObj, layoutInfo.scale);
+      }
+    });
+
+    // Update zone borders
+    this.updateZoneBorders(layout);
+  }
+
+  private createZoneLabel(zoneName: string, position: THREE.Vector3): THREE.Sprite {
+    // Create canvas for text rendering
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    canvas.width = 256;
+    canvas.height = 64;
+
+    // No background fill - transparent background
+
+    // Style and draw text
+    context.font = 'bold 28px Arial, sans-serif';
+    context.fillStyle = 'white';
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    context.fillText(zoneName, 12, 14);
+
+    // Create texture and sprite
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false // Render on top
+    });
+
+    const sprite = new THREE.Sprite(material);
+
+    // Scale sprite appropriately (adjust based on scene scale)
+    sprite.scale.set(12, 3, 1);
+    sprite.position.copy(position);
+    sprite.renderOrder = 1000; // Render above everything else
+
+    // Disable raycasting so labels don't interfere with hover
+    sprite.raycast = () => {};
+
+    return sprite;
+  }
+
+  private updateZoneBorders(layout: ZoneLayout): void {
+    // Clear existing borders and labels
+    this.zoneBordersGroup.clear();
+    this.zoneLabelsGroup.clear();
+
+    // Create border and label for each zone
+    layout.zones.forEach(zone => {
+      const halfWidth = zone.size.width / 2;
+      const halfHeight = zone.size.height / 2;
+
+      // Create rectangle border
+      const points: THREE.Vector3[] = [
+        new THREE.Vector3(zone.position.x - halfWidth, 0, zone.position.z - halfHeight),
+        new THREE.Vector3(zone.position.x + halfWidth, 0, zone.position.z - halfHeight),
+        new THREE.Vector3(zone.position.x + halfWidth, 0, zone.position.z + halfHeight),
+        new THREE.Vector3(zone.position.x - halfWidth, 0, zone.position.z + halfHeight),
+        new THREE.Vector3(zone.position.x - halfWidth, 0, zone.position.z - halfHeight), // Close the loop
+      ];
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({
+        color: 0x808080, // Gray color
+        linewidth: 1,
+        transparent: true,
+        opacity: 0.5
+      });
+
+      const border = new THREE.Line(geometry, material);
+      border.renderOrder = -1; // Render behind other objects
+      border.raycast = () => {}; // Disable raycasting so it doesn't interfere with hover
+
+      this.zoneBordersGroup.add(border);
+
+      // Create zone label above the zone border (outside the content area)
+      // Position label with offset accounting for label size
+      const labelOffsetX = 6; // Horizontal offset to align with left border
+      const labelOffsetZ = 2; // Vertical offset - position above but close to the top border
+      const labelPosition = new THREE.Vector3(
+        zone.position.x - halfWidth + labelOffsetX,
+        0.5, // Slightly above ground
+        zone.position.z - halfHeight - labelOffsetZ // Negative to position ABOVE the zone
+      );
+
+      const label = this.createZoneLabel(zone.zoneName, labelPosition);
+      this.zoneLabelsGroup.add(label);
+    });
+  }
+
   private updateNodes(nodes: KubernetesNode[]): void {
     const currentNodeIds = new Set(nodes.map(n => n.uid));
 
@@ -119,21 +269,49 @@ export class VisualizationManager {
     // Check if node count has changed
     const nodeCountChanged = this.nodes.size !== nodes.length;
 
+    // Initialize zone manager if needed
+    if (!this.zoneManager) {
+      this.initializeZoneManager();
+    }
+
     // Only recalculate layout if it's initial setup, node count changed, or layout isn't locked
     let layout = this.lastLayout;
     if (!layout || isInitialSetup || (nodeCountChanged && !this.layoutLocked)) {
-      layout = this.calculateLayout(nodes.length);
+      if (!this.zoneManager) {
+        console.error('[VisualizationManager] ZoneManager not initialized');
+        return;
+      }
+      layout = this.zoneManager.calculateZoneLayout(nodes);
       this.lastLayout = layout;
+
+      // Update zone borders when layout changes
+      this.updateZoneBorders(layout);
 
       // Lock layout after initial setup
       if (isInitialSetup && nodes.length > 0) {
         this.layoutLocked = true;
       }
-    } else {
     }
 
-    nodes.forEach((nodeData, index) => {
+    // Create a map of node UID to its position and scale in the zone layout
+    const nodePositionMap = new Map<string, { position: THREE.Vector3; scale: number }>();
+    layout.zones.forEach(zone => {
+      zone.nodes.forEach((nodeData, index) => {
+        nodePositionMap.set(nodeData.uid, {
+          position: zone.nodePositions[index],
+          scale: zone.nodeScale
+        });
+      });
+    });
+
+    nodes.forEach((nodeData) => {
       let node = this.nodes.get(nodeData.uid);
+      const layoutInfo = nodePositionMap.get(nodeData.uid);
+
+      if (!layoutInfo) {
+        console.error('[VisualizationManager] No layout info for node:', nodeData.name);
+        return;
+      }
 
       if (!node) {
         console.log('[VisualizationManager] Creating new node:', nodeData.name);
@@ -143,27 +321,27 @@ export class VisualizationManager {
         this.nodeGroup.add(node);
 
         // Set the final position and scale immediately
-        node.position.copy(layout.positions[index]);
-        node.scale.setScalar(layout.scale);
+        node.position.copy(layoutInfo.position);
+        node.scale.setScalar(layoutInfo.scale);
 
         // Only animate if not initial setup
         if (!isInitialSetup) {
           // For new nodes after initial setup, start from scale 0
           node.scale.set(0, 0, 0);
-          this.animateNodeCreation(node, layout.scale);
+          this.animateNodeCreation(node, layoutInfo.scale);
         }
       } else {
         node.updateNode(nodeData);
         // Only animate if layout has actually changed
-        const scaleChanged = Math.abs(node.scale.x - layout.scale) > 0.01;
-        const positionChanged = node.position.distanceTo(layout.positions[index]) > 0.1;
+        const scaleChanged = Math.abs(node.scale.x - layoutInfo.scale) > 0.01;
+        const positionChanged = node.position.distanceTo(layoutInfo.position) > 0.1;
 
         if (scaleChanged || positionChanged) {
           if (positionChanged) {
-            this.animateNodePosition(node, layout.positions[index]);
+            this.animateNodePosition(node, layoutInfo.position);
           }
           if (scaleChanged) {
-            this.animateNodeScale(node, layout.scale);
+            this.animateNodeScale(node, layoutInfo.scale);
           }
         }
       }
@@ -309,107 +487,6 @@ export class VisualizationManager {
     };
 
     this.podInstanceManager.updatePods(pods, getPositionForPod);
-  }
-
-
-
-  private calculateLayout(nodeCount: number): { positions: THREE.Vector3[], scale: number } {
-    // Use reference viewport for consistent sizing
-    // If we haven't stored a reference viewport, calculate one at standard distance
-    if (!this.referenceViewport) {
-      // Calculate viewport at standard camera distance of 100 units
-      const standardDistance = 100;
-      const camera = this.sceneManager.getCamera();
-      const vFov = (camera.fov * Math.PI) / 180;
-      const height = 2 * Math.tan(vFov / 2) * standardDistance;
-      const width = height * camera.aspect;
-      this.referenceViewport = { width: width * 0.8, height: height * 0.8 };
-    }
-
-    const viewport = this.referenceViewport;
-    const aspectRatio = viewport.width / viewport.height;
-
-    // Calculate optimal grid dimensions
-    let cols = Math.ceil(Math.sqrt(nodeCount * aspectRatio));
-    let rows = Math.ceil(nodeCount / cols);
-
-    // Ensure at least 2 columns for better layout when we have multiple nodes
-    if (cols < 2 && nodeCount > 1) cols = 2;
-
-    // Adaptive node sizing based on cluster size
-    const baseNodeSize = 20; // This matches the actual geometry size in NodeObject
-
-    // Dynamic size constraints based on node count
-    let minNodeSize: number;
-    let maxNodeSize: number;
-    let spacingFactor: number;
-
-    if (nodeCount <= 10) {
-      // Small clusters: larger nodes with more spacing
-      minNodeSize = 15;
-      maxNodeSize = 40;
-      spacingFactor = 0.20; // 20% spacing
-    } else if (nodeCount <= 50) {
-      // Medium clusters: moderate sizing
-      minNodeSize = 8;
-      maxNodeSize = 25;
-      spacingFactor = 0.15; // 15% spacing
-    } else if (nodeCount <= 200) {
-      // Large clusters: smaller nodes, tighter spacing
-      minNodeSize = 4;
-      maxNodeSize = 15;
-      spacingFactor = 0.10; // 10% spacing
-    } else {
-      // Very large clusters: minimum sizing for visibility
-      minNodeSize = 2;
-      maxNodeSize = 8;
-      spacingFactor = 0.05; // 5% spacing
-    }
-
-    // Calculate optimal node size to fill viewport
-    const availableWidth = viewport.width / (cols * (1 + spacingFactor));
-    const availableHeight = viewport.height / (rows * (1 + spacingFactor));
-
-    // Choose the smaller dimension to ensure everything fits
-    let nodeSize = Math.min(availableWidth, availableHeight);
-
-    // Apply size constraints
-    nodeSize = Math.max(minNodeSize, Math.min(maxNodeSize, nodeSize));
-
-    // Calculate actual spacing
-    const spacing = nodeSize * (1 + spacingFactor);
-
-    // Calculate positions for all nodes
-    const positions: THREE.Vector3[] = [];
-    const gridWidth = cols * spacing - nodeSize * spacingFactor;
-    const gridHeight = rows * spacing - nodeSize * spacingFactor;
-
-    for (let i = 0; i < nodeCount; i++) {
-      const row = Math.floor(i / cols);
-      const col = i % cols;
-
-      const x = col * spacing - gridWidth / 2 + nodeSize / 2;
-      const z = row * spacing - gridHeight / 2 + nodeSize / 2;
-      const y = 0; // Keep all nodes at ground level for 2D view
-
-      positions.push(new THREE.Vector3(x, y, z));
-    }
-
-    // Calculate scale relative to base geometry size
-    const scale = nodeSize / baseNodeSize;
-
-    console.log('[VisualizationManager] Layout calculated:', {
-      nodeCount,
-      cols,
-      rows,
-      nodeSize,
-      scale,
-      viewport,
-      gridWidth,
-      gridHeight
-    });
-
-    return { positions, scale };
   }
 
 
@@ -761,52 +838,39 @@ export class VisualizationManager {
       const prioritizedObject = this.getPriorityHoverObject(intersects);
       if (prioritizedObject) {
         this.showTooltip(prioritizedObject, event.clientX, event.clientY);
+        return;
       }
-    } else {
-      this.hideTooltip();
     }
-  }
 
-  public handleClick(_event: MouseEvent): void {
-    const raycaster = this.sceneManager.getRaycaster();
-
-    const allObjects: THREE.Object3D[] = [
-      ...Array.from(this.nodes.values()),
-      ...Array.from(this.pods.values())
-    ];
-
-    const intersects = raycaster.intersectObjects(allObjects, true);
-
-    this.clearSelection();
-
-    if (intersects.length > 0) {
-      const object = this.findParentObject(intersects[0].object);
-      if (object) {
-        if (object instanceof NodeObject) {
-          object.setSelected(true);
-        } else if (object instanceof PodObject) {
-          object.setSelected(true);
+    // Check for zone hover if no object was hit
+    if (this.zoneManager && this.lastLayout) {
+      const worldPoint = this.getWorldPointFromMouse(raycaster);
+      if (worldPoint) {
+        const zone = this.zoneManager.findZoneAtPosition(worldPoint, this.lastLayout);
+        if (zone) {
+          this.showZoneTooltip(zone.zoneName, zone.nodes, event.clientX, event.clientY);
+          return;
         }
       }
     }
+
+    this.hideTooltip();
+  }
+
+  private getWorldPointFromMouse(raycaster: THREE.Raycaster): THREE.Vector3 | null {
+    // Create a plane at y=0 (ground level) to intersect with raycaster
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const target = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, target);
+    return target;
+  }
+
+  public handleClick(_event: MouseEvent): void {
+    // Removed click behavior: no longer spins nodes or changes colors
   }
 
   public handleDoubleClick(_event: MouseEvent): void {
-    const raycaster = this.sceneManager.getRaycaster();
-
-    const allObjects: THREE.Object3D[] = [
-      ...Array.from(this.nodes.values()),
-      ...Array.from(this.pods.values())
-    ];
-
-    const intersects = raycaster.intersectObjects(allObjects, true);
-
-    if (intersects.length > 0) {
-      const object = this.findParentObject(intersects[0].object);
-      if (object) {
-        this.sceneManager.focusOnObject(object);
-      }
-    }
+    // Removed double-click zoom behavior
   }
 
   // T015: Priority resolver for hover detection
@@ -849,11 +913,6 @@ export class VisualizationManager {
       current = current.parent;
     }
     return null;
-  }
-
-  private clearSelection(): void {
-    this.nodes.forEach(node => node.setSelected(false));
-    this.pods.forEach(pod => pod.setSelected(false));
   }
 
   private showTooltip(object: NodeObject | PodObject, x: number, y: number): void {
@@ -969,6 +1028,38 @@ export class VisualizationManager {
     tooltip.style.top = `${y + 10}px`;
   }
 
+  private showZoneTooltip(zoneName: string, nodes: KubernetesNode[], x: number, y: number): void {
+    const tooltip = document.getElementById('tooltip');
+    if (!tooltip) return;
+
+    if (!this.zoneManager) return;
+
+    const zoneInfo = this.zoneManager.getZoneInfo(zoneName, nodes);
+
+    const content = `
+      <div class="tooltip-title">Zone: ${zoneInfo.name}</div>
+      <div class="tooltip-content">
+        <div class="tooltip-row">
+          <span class="tooltip-label">Nodes:</span>
+          <span class="tooltip-value">${zoneInfo.nodeCount} (${zoneInfo.readyNodes} ready)</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">Total CPU:</span>
+          <span class="tooltip-value">${zoneInfo.totalCpu}</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">Total Memory:</span>
+          <span class="tooltip-value">${zoneInfo.totalMemory}</span>
+        </div>
+      </div>
+    `;
+
+    tooltip.innerHTML = content;
+    tooltip.style.display = 'block';
+    tooltip.style.left = `${x + 10}px`;
+    tooltip.style.top = `${y + 10}px`;
+  }
+
   private hideTooltip(): void {
     const tooltip = document.getElementById('tooltip');
     if (tooltip) {
@@ -998,7 +1089,22 @@ export class VisualizationManager {
       this.pods.clear();
     }
 
+    // Clear zone borders and labels
+    // Dispose label sprites and textures
+    this.zoneLabelsGroup.children.forEach(child => {
+      if (child instanceof THREE.Sprite) {
+        if (child.material.map) {
+          child.material.map.dispose();
+        }
+        child.material.dispose();
+      }
+    });
+    this.zoneLabelsGroup.clear();
+    this.zoneBordersGroup.clear();
+
     this.sceneManager.removeObject(this.nodeGroup);
     this.sceneManager.removeObject(this.podGroup);
+    this.sceneManager.removeObject(this.zoneBordersGroup);
+    this.sceneManager.removeObject(this.zoneLabelsGroup);
   }
 }

@@ -59,6 +59,12 @@ export class SceneManager {
     controls.maxPolarAngle = 0.1; // Nearly straight down
     controls.enableRotate = false; // Disable rotation for pure 2D feel
     controls.enablePan = true;
+    // Enable left-click panning
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.PAN,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN
+    };
     return controls;
   }
 
