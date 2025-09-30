@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org)
 [![Three.js](https://img.shields.io/badge/Three.js-Latest-orange)](https://threejs.org)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue)](https://github.com/stianfro/threek8s/pkgs)
-[![Helm](https://img.shields.io/badge/Helm-v1.0.6-purple)](https://github.com/stianfro/threek8s/pkgs)
+[![Helm](https://img.shields.io/badge/Helm-v1.3.0-purple)](https://github.com/stianfro/threek8s/pkgs)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 A real-time 3D visualization tool for Kubernetes clusters using Three.js.
@@ -14,13 +14,14 @@ Watch your nodes and pods come to life in an interactive 3D space with smooth an
 
 ## ✨ Features
 
+- **Zone-based Node Grouping**: Nodes automatically grouped by availability zone with visual labels
 - **3D Visualization**: Nodes displayed as large boxes containing pods as smaller boxes
 - **Real-time Updates**: Live synchronization with your Kubernetes cluster via WebSocket
 - **Interactive Controls**: Rotate, pan, zoom, and interact with objects
 - **Smart Animations**: Smooth transitions for pod creation, deletion, and status changes
 - **Multi-namespace Support**: View all pods across all namespaces
 - **Color-coded Status**: Visual indicators for different pod and node states
-- **Hover Information**: Detailed tooltips showing resource information
+- **Hover Information**: Detailed tooltips showing resource information for nodes, pods, and zones
 - **Performance Optimized**: Handles clusters with 100+ nodes efficiently
 
 ![CleanShot 2025-09-30 at 14 37 48](https://github.com/user-attachments/assets/77e63100-ebc6-48b4-9a47-b4c22f641f21)
@@ -36,17 +37,17 @@ Deploy ThreeK8s directly to your Kubernetes cluster using our official Helm char
 # Note: The chart will be available after the first release is created
 
 # Install the latest version
-helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.6
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.3.0
 
 # Install with custom namespace
 helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
   --namespace threek8s \
   --create-namespace \
-  --version 1.0.6
+  --version 1.3.0
 
 # Install with custom values
 helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
-  --version 1.0.6 \
+  --version 1.3.0 \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host=threek8s.example.com \
   --set backend.resources.requests.memory=256Mi
@@ -91,14 +92,14 @@ Then deploy using the override file:
 
 ```bash
 helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
-  --version 1.0.6 \
+  --version 1.3.0 \
   -f values-production.yaml
 ```
 
 View available configuration options:
 
 ```bash
-helm show values oci://ghcr.io/stianfro/threek8s/chart --version 1.0.6
+helm show values oci://ghcr.io/stianfro/threek8s/chart --version 1.3.0
 ```
 
 ### Using Docker Compose
@@ -394,9 +395,9 @@ Docker images for `amd64` architecture:
 - **Latest**: Always points to the most recent stable release
 
 ```bash
-# Pull current version (1.0.0)
-docker pull ghcr.io/stianfro/threek8s/backend:1.0.0
-docker pull ghcr.io/stianfro/threek8s/frontend:1.0.0
+# Pull current version (1.3.0)
+docker pull ghcr.io/stianfro/threek8s/backend:1.3.0
+docker pull ghcr.io/stianfro/threek8s/frontend:1.3.0
 
 # Pull latest version
 docker pull ghcr.io/stianfro/threek8s/backend:latest
@@ -407,14 +408,14 @@ docker run -d \
   --name threek8s-backend \
   -p 8080:8080 \
   -v ~/.kube/config:/root/.kube/config:ro \
-  ghcr.io/stianfro/threek8s/backend:1.0.0
+  ghcr.io/stianfro/threek8s/backend:1.3.0
 
 docker run -d \
   --name threek8s-frontend \
   -p 3000:80 \
   -e VITE_API_URL=http://localhost:8080/api \
   -e VITE_WS_URL=ws://localhost:8080/ws \
-  ghcr.io/stianfro/threek8s/frontend:1.0.0
+  ghcr.io/stianfro/threek8s/frontend:1.3.0
 ```
 
 #### Helm Chart
@@ -430,7 +431,7 @@ Production-ready Helm chart with extensive configuration options:
 helm install threek8s oci://ghcr.io/stianfro/threek8s/chart
 
 # Install specific version
-helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.3.0
 
 # Upgrade existing deployment
 helm upgrade threek8s oci://ghcr.io/stianfro/threek8s/chart
@@ -484,16 +485,16 @@ The official Helm chart provides a production-ready deployment with all necessar
 
 ```bash
 # Basic installation
-helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.3.0
 
 # Installation with Ingress enabled
-helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0 \
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.3.0 \
   --set ingress.enabled=true \
   --set ingress.hosts[0].host=threek8s.yourdomain.com \
   --set ingress.className=nginx
 
 # Installation with resource limits and autoscaling
-helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.0.0 \
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.3.0 \
   --set backend.resources.requests.memory=256Mi \
   --set backend.resources.limits.memory=512Mi \
   --set backend.autoscaling.enabled=true \
@@ -508,7 +509,7 @@ kubectl port-forward service/threek8s-frontend 8080:80
 # Then open http://localhost:8080
 
 # Upgrade to a new version
-helm upgrade threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.1.0
+helm upgrade threek8s oci://ghcr.io/stianfro/threek8s/chart --version 1.3.0
 
 # Uninstall
 helm uninstall threek8s
@@ -582,7 +583,7 @@ spec:
       serviceAccountName: threek8s
       containers:
         - name: backend
-          image: ghcr.io/stianfro/threek8s/backend:1.0.0
+          image: ghcr.io/stianfro/threek8s/backend:1.3.0
           ports:
             - containerPort: 8080
           env:
@@ -608,7 +609,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/stianfro/threek8s/frontend:1.0.0
+          image: ghcr.io/stianfro/threek8s/frontend:1.3.0
           ports:
             - containerPort: 80
           env:
