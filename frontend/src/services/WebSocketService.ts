@@ -1,6 +1,6 @@
-import type { WebSocketMessage, StateUpdate, EventMessage } from '../types/kubernetes';
+import type { WebSocketMessage, StateUpdate, EventMessage } from "../types/kubernetes";
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
 export interface WebSocketServiceOptions {
   url: string;
@@ -34,18 +34,18 @@ export class WebSocketService {
 
   public connect(): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log('WebSocket already connected');
+      console.log("WebSocket already connected");
       return;
     }
 
     this.isManualClose = false;
-    this.updateStatus('connecting');
+    this.updateStatus("connecting");
 
     try {
       this.ws = new WebSocket(this.url);
       this.setupEventHandlers();
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+      console.error("Failed to create WebSocket:", error);
       this.handleError(error as Error);
       this.scheduleReconnect();
     }
@@ -55,9 +55,9 @@ export class WebSocketService {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log('WebSocket connected');
+      console.log("WebSocket connected");
       this.reconnectAttempts = 0;
-      this.updateStatus('connected');
+      this.updateStatus("connected");
       this.startHeartbeat();
     };
 
@@ -66,21 +66,21 @@ export class WebSocketService {
         const message: WebSocketMessage = JSON.parse(event.data);
         this.handleMessage(message);
       } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-        this.handleError(new Error('Invalid message format'));
+        console.error("Failed to parse WebSocket message:", error);
+        this.handleError(new Error("Invalid message format"));
       }
     };
 
     this.ws.onerror = (event) => {
-      console.error('WebSocket error:', event);
-      this.updateStatus('error');
-      this.handleError(new Error('WebSocket connection error'));
+      console.error("WebSocket error:", event);
+      this.updateStatus("error");
+      this.handleError(new Error("WebSocket connection error"));
     };
 
     this.ws.onclose = (event) => {
-      console.log('WebSocket closed:', event.code, event.reason);
+      console.log("WebSocket closed:", event.code, event.reason);
       this.stopHeartbeat();
-      this.updateStatus('disconnected');
+      this.updateStatus("disconnected");
 
       if (!this.isManualClose && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.scheduleReconnect();
@@ -89,79 +89,79 @@ export class WebSocketService {
   }
 
   private handleMessage(message: WebSocketMessage): void {
-    console.log('[WebSocket] Received message:', message.type, message);
+    console.log("[WebSocket] Received message:", message.type, message);
 
     switch (message.type) {
-      case 'state':
+      case "state":
         if (this.onStateUpdateCallback) {
           this.onStateUpdateCallback(message.data as StateUpdate);
         }
         break;
 
-      case 'event':
+      case "event":
         if (this.onEventCallback) {
           this.onEventCallback(message.data as EventMessage);
         }
         break;
 
       // Handle backend's specific event types
-      case 'node_event':
+      case "node_event":
         if (this.onEventCallback) {
           const nodeEvent: EventMessage = {
-            eventType: 'node',
-            action: message.action?.toLowerCase() as any || 'modified',
-            resource: message.data
+            eventType: "node",
+            action: (message.action?.toLowerCase() as any) || "modified",
+            resource: message.data,
           };
           this.onEventCallback(nodeEvent);
         }
         break;
 
-      case 'pod_event':
+      case "pod_event":
         if (this.onEventCallback) {
           // Convert backend action format (ADDED, MODIFIED, DELETED) to frontend format
-          const action = message.action?.toLowerCase().replace('deleted', 'deleted').replace('added', 'added').replace('modified', 'modified') as any;
-          console.log('[WebSocket] Pod event:', action, message.data);
+          const action = (message.action?.toLowerCase() as any) || "modified";
+          console.log("[WebSocket] Pod event:", action, message.data);
           const podEvent: EventMessage = {
-            eventType: 'pod',
-            action: action || 'modified',
-            resource: message.data
+            eventType: "pod",
+            action: action,
+            resource: message.data,
           };
           this.onEventCallback(podEvent);
         }
         break;
 
-      case 'namespace_event':
+      case "namespace_event":
         if (this.onEventCallback) {
           const namespaceEvent: EventMessage = {
-            eventType: 'namespace',
-            action: message.action?.toLowerCase() as any || 'modified',
-            resource: message.data
+            eventType: "namespace",
+            action: (message.action?.toLowerCase() as any) || "modified",
+            resource: message.data,
           };
           this.onEventCallback(namespaceEvent);
         }
         break;
 
-      case 'metrics':
+      case "metrics":
         // Handle metrics updates as state updates
         if (this.onStateUpdateCallback) {
           this.onStateUpdateCallback({ metrics: message.data });
         }
         break;
 
-      case 'ping':
+      case "ping":
         this.sendPong();
         break;
 
-      case 'pong':
+      case "pong":
         break;
 
-      case 'error':
-        console.error('Server error:', message.data);
-        this.handleError(new Error(message.data?.message || 'Server error'));
+      case "error":
+        console.error("Server error:", message.data);
+        this.handleError(new Error(message.data?.message || "Server error"));
         break;
 
       default:
-        console.warn('Unknown message type:', message.type, message);
+        console.warn("Unknown message type:", message.type, message);
     }
   }
 
@@ -183,11 +183,11 @@ export class WebSocketService {
   }
 
   private sendPing(): void {
-    this.send({ type: 'ping', timestamp: new Date().toISOString() });
+    this.send({ type: "ping", timestamp: new Date().toISOString() });
   }
 
   private sendPong(): void {
-    this.send({ type: 'pong', timestamp: new Date().toISOString() });
+    this.send({ type: "pong", timestamp: new Date().toISOString() });
   }
 
   private scheduleReconnect(): void {
@@ -196,7 +196,9 @@ export class WebSocketService {
     }
 
     this.reconnectAttempts++;
-    console.log(`Reconnecting in ${this.reconnectInterval}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    console.log(
+      `Reconnecting in ${this.reconnectInterval}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
+    );
 
     this.reconnectTimer = window.setTimeout(() => {
       this.connect();
@@ -220,11 +222,11 @@ export class WebSocketService {
       try {
         this.ws.send(JSON.stringify(message));
       } catch (error) {
-        console.error('Failed to send message:', error);
+        console.error("Failed to send message:", error);
         this.handleError(error as Error);
       }
     } else {
-      console.warn('Cannot send message: WebSocket not connected');
+      console.warn("Cannot send message: WebSocket not connected");
     }
   }
 
@@ -240,12 +242,12 @@ export class WebSocketService {
 
     if (this.ws) {
       if (this.ws.readyState === WebSocket.OPEN) {
-        this.ws.close(1000, 'Client disconnecting');
+        this.ws.close(1000, "Client disconnecting");
       }
       this.ws = null;
     }
 
-    this.updateStatus('disconnected');
+    this.updateStatus("disconnected");
   }
 
   public onStateUpdate(callback: (state: StateUpdate) => void): void {
@@ -269,18 +271,18 @@ export class WebSocketService {
   }
 
   public getStatus(): ConnectionStatus {
-    if (!this.ws) return 'disconnected';
+    if (!this.ws) return "disconnected";
 
     switch (this.ws.readyState) {
       case WebSocket.CONNECTING:
-        return 'connecting';
+        return "connecting";
       case WebSocket.OPEN:
-        return 'connected';
+        return "connected";
       case WebSocket.CLOSING:
       case WebSocket.CLOSED:
-        return 'disconnected';
+        return "disconnected";
       default:
-        return 'disconnected';
+        return "disconnected";
     }
   }
 }

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 export class GeometryPool {
   private static instance: GeometryPool;
@@ -57,7 +57,7 @@ export class GeometryPool {
         transparent: true,
         opacity: 0.95,
         emissive: color,
-        emissiveIntensity: 0.2
+        emissiveIntensity: 0.2,
       });
       this.podMaterials.set(color, material);
       this.materialUsageCount.set(material, 0);
@@ -77,7 +77,7 @@ export class GeometryPool {
         color: color,
         transparent: true,
         opacity: 0.2,
-        side: THREE.BackSide
+        side: THREE.BackSide,
       });
       this.podOutlineMaterials.set(color, material);
       this.materialUsageCount.set(material, 0);
@@ -98,7 +98,7 @@ export class GeometryPool {
         transparent: true,
         opacity: 0.3,
         side: THREE.DoubleSide,
-        depthWrite: false
+        depthWrite: false,
       });
       this.nodeMaterials.set(color, material);
       this.materialUsageCount.set(material, 0);
@@ -119,7 +119,7 @@ export class GeometryPool {
         transparent: true,
         opacity: 0.1,
         side: THREE.BackSide,
-        depthWrite: false
+        depthWrite: false,
       });
       this.nodeOutlineMaterials.set(color, material);
       this.materialUsageCount.set(material, 0);
@@ -150,9 +150,12 @@ export class GeometryPool {
 
     return {
       geometries: 4, // We always have 4 shared geometries
-      materials: this.podMaterials.size + this.podOutlineMaterials.size +
-                 this.nodeMaterials.size + this.nodeOutlineMaterials.size,
-      activeMaterials
+      materials:
+        this.podMaterials.size +
+        this.podOutlineMaterials.size +
+        this.nodeMaterials.size +
+        this.nodeOutlineMaterials.size,
+      activeMaterials,
     };
   }
 
@@ -164,10 +167,10 @@ export class GeometryPool {
     this.nodeOutlineGeometry.dispose();
 
     // Dispose all materials
-    this.podMaterials.forEach(material => material.dispose());
-    this.podOutlineMaterials.forEach(material => material.dispose());
-    this.nodeMaterials.forEach(material => material.dispose());
-    this.nodeOutlineMaterials.forEach(material => material.dispose());
+    this.podMaterials.forEach((material) => material.dispose());
+    this.podOutlineMaterials.forEach((material) => material.dispose());
+    this.nodeMaterials.forEach((material) => material.dispose());
+    this.nodeOutlineMaterials.forEach((material) => material.dispose());
 
     // Clear maps
     this.podMaterials.clear();

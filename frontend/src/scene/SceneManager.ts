@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 export class SceneManager {
   private scene: THREE.Scene;
@@ -38,7 +38,7 @@ export class SceneManager {
   private createRenderer(): THREE.WebGLRenderer {
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true
+      alpha: true,
     });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(this.container.clientWidth, this.container.clientHeight);
@@ -52,7 +52,7 @@ export class SceneManager {
     const controls = new OrbitControls(this.camera, this.renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 20;  // Allow closer zoom
+    controls.minDistance = 20; // Allow closer zoom
     controls.maxDistance = 500; // Increased from 300 for better large cluster view
     // Lock to top-down view
     controls.minPolarAngle = 0; // 0 degrees (straight down)
@@ -63,7 +63,7 @@ export class SceneManager {
     controls.mouseButtons = {
       LEFT: THREE.MOUSE.PAN,
       MIDDLE: THREE.MOUSE.DOLLY,
-      RIGHT: THREE.MOUSE.PAN
+      RIGHT: THREE.MOUSE.PAN,
     };
     return controls;
   }
@@ -105,12 +105,12 @@ export class SceneManager {
   }
 
   private setupEventListeners(): void {
-    window.addEventListener('resize', this.handleResize.bind(this));
+    window.addEventListener("resize", this.handleResize.bind(this));
     // T007 FIX: Removed duplicate mousemove listener
     // Mouse events are handled in main.ts on viewport element
     // this.renderer.domElement.addEventListener('mousemove', this.handleMouseMove.bind(this));
-    this.renderer.domElement.addEventListener('click', this.handleClick.bind(this));
-    this.renderer.domElement.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+    this.renderer.domElement.addEventListener("click", this.handleClick.bind(this));
+    this.renderer.domElement.addEventListener("dblclick", this.handleDoubleClick.bind(this));
   }
 
   private handleResize(): void {
@@ -194,9 +194,7 @@ export class SceneManager {
     const fov = this.camera.fov * (Math.PI / 180);
     const distance = Math.abs(maxDim / Math.sin(fov / 2)) * 1.5;
 
-    const direction = new THREE.Vector3()
-      .subVectors(this.camera.position, center)
-      .normalize();
+    const direction = new THREE.Vector3().subVectors(this.camera.position, center).normalize();
 
     this.camera.position.copy(center).add(direction.multiplyScalar(distance));
     this.camera.lookAt(center);
@@ -211,10 +209,10 @@ export class SceneManager {
 
   public dispose(): void {
     this.stop();
-    window.removeEventListener('resize', this.handleResize.bind(this));
-    this.renderer.domElement.removeEventListener('mousemove', this.handleMouseMove.bind(this));
-    this.renderer.domElement.removeEventListener('click', this.handleClick.bind(this));
-    this.renderer.domElement.removeEventListener('dblclick', this.handleDoubleClick.bind(this));
+    window.removeEventListener("resize", this.handleResize.bind(this));
+    this.renderer.domElement.removeEventListener("mousemove", this.handleMouseMove.bind(this));
+    this.renderer.domElement.removeEventListener("click", this.handleClick.bind(this));
+    this.renderer.domElement.removeEventListener("dblclick", this.handleDoubleClick.bind(this));
 
     this.controls.dispose();
     this.renderer.dispose();

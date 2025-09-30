@@ -1,10 +1,10 @@
-import { KubeConfig, CoreV1Api, VersionApi, Watch } from '@kubernetes/client-node';
-import { KubernetesNode } from '../models/KubernetesNode';
-import { Pod } from '../models/Pod';
-import { Namespace } from '../models/Namespace';
-import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as os from 'os';
+import { KubeConfig, CoreV1Api, VersionApi, Watch } from "@kubernetes/client-node";
+import { KubernetesNode } from "../models/KubernetesNode";
+import { Pod } from "../models/Pod";
+import { Namespace } from "../models/Namespace";
+import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as os from "os";
 
 export class KubernetesService extends EventEmitter {
   private kubeConfig: KubeConfig;
@@ -28,10 +28,10 @@ export class KubernetesService extends EventEmitter {
     const inCluster = process.env.KUBERNETES_SERVICE_HOST !== undefined;
 
     if (inCluster) {
-      console.log('KubernetesService: Loading in-cluster config');
+      console.log("KubernetesService: Loading in-cluster config");
       this.kubeConfig.loadFromCluster();
     } else if (kubeconfigPath) {
-      const resolvedPath = kubeconfigPath.replace('~', os.homedir());
+      const resolvedPath = kubeconfigPath.replace("~", os.homedir());
       if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
         console.log(`KubernetesService: Loading config from file: ${resolvedPath}`);
         this.kubeConfig.loadFromFile(resolvedPath);
@@ -40,7 +40,7 @@ export class KubernetesService extends EventEmitter {
       }
     } else {
       // Try to load from default location
-      console.log('KubernetesService: Loading config from default location');
+      console.log("KubernetesService: Loading config from default location");
       this.kubeConfig.loadFromDefault();
     }
   }
@@ -51,7 +51,7 @@ export class KubernetesService extends EventEmitter {
       const version = await this.versionApi.getCode();
       this.connected = true;
       const versionData = (version as any).body || version;
-      this.emit('connected', {
+      this.emit("connected", {
         version: versionData.gitVersion,
         platform: versionData.platform,
       });
@@ -101,7 +101,7 @@ export class KubernetesService extends EventEmitter {
     // Count pods per namespace
     const pods = await this.getPods();
     const podCounts = new Map<string, number>();
-    pods.forEach(pod => {
+    pods.forEach((pod) => {
       const count = podCounts.get(pod.namespace) || 0;
       podCounts.set(pod.namespace, count + 1);
     });
@@ -115,40 +115,41 @@ export class KubernetesService extends EventEmitter {
 
   private transformNode(node: any): KubernetesNode {
     const conditions = node.status?.conditions || [];
-    const readyCondition = conditions.find((c: any) => c.type === 'Ready');
-    const role = node.metadata?.labels?.['node-role.kubernetes.io/master'] !== undefined
-      ? 'master'
-      : node.metadata?.labels?.['node-role.kubernetes.io/control-plane'] !== undefined
-      ? 'control-plane'
-      : 'worker';
+    const readyCondition = conditions.find((c: any) => c.type === "Ready");
+    const role =
+      node.metadata?.labels?.["node-role.kubernetes.io/master"] !== undefined
+        ? "master"
+        : node.metadata?.labels?.["node-role.kubernetes.io/control-plane"] !== undefined
+          ? "control-plane"
+          : "worker";
 
     // Extract zone from topology label
     const labels = node.metadata?.labels || {};
-    const zone = labels['topology.kubernetes.io/zone'] || 'N/A';
+    const zone = labels["topology.kubernetes.io/zone"] || "N/A";
 
     return {
-      name: node.metadata?.name || '',
-      uid: node.metadata?.uid || '',
-      status: readyCondition?.status === 'True' ? 'Ready' : 'NotReady',
+      name: node.metadata?.name || "",
+      uid: node.metadata?.uid || "",
+      status: readyCondition?.status === "True" ? "Ready" : "NotReady",
       role,
       capacity: {
-        cpu: node.status?.capacity?.cpu || '0',
-        memory: node.status?.capacity?.memory || '0',
-        pods: node.status?.capacity?.pods || '0',
-        storage: node.status?.capacity?.['ephemeral-storage'] || '0',
+        cpu: node.status?.capacity?.cpu || "0",
+        memory: node.status?.capacity?.memory || "0",
+        pods: node.status?.capacity?.pods || "0",
+        storage: node.status?.capacity?.["ephemeral-storage"] || "0",
       },
       allocatable: {
-        cpu: node.status?.allocatable?.cpu || '0',
-        memory: node.status?.allocatable?.memory || '0',
-        pods: node.status?.allocatable?.pods || '0',
-        storage: node.status?.allocatable?.['ephemeral-storage'] || '0',
+        cpu: node.status?.allocatable?.cpu || "0",
+        memory: node.status?.allocatable?.memory || "0",
+        pods: node.status?.allocatable?.pods || "0",
+        storage: node.status?.allocatable?.["ephemeral-storage"] || "0",
       },
       conditions: conditions.map((c: any) => ({
         type: c.type,
         status: c.status,
         lastTransitionTime: new Date(c.lastTransitionTime),
-        reason: c.reason || '',
-        message: c.message || '',
+        reason: c.reason || "",
+        message: c.message || "",
       })),
       labels,
       creationTimestamp: new Date(node.metadata?.creationTimestamp),
@@ -157,26 +158,30 @@ export class KubernetesService extends EventEmitter {
   }
 
   private transformPod(pod: any): Pod {
-    const phase = pod.status?.phase || 'Unknown';
+    const phase = pod.status?.phase || "Unknown";
     const containers = pod.spec?.containers || [];
     const containerStatuses = pod.status?.containerStatuses || [];
 
     return {
-      name: pod.metadata?.name || '',
-      uid: pod.metadata?.uid || '',
-      namespace: pod.metadata?.namespace || '',
-      nodeName: pod.spec?.nodeName || '',
+      name: pod.metadata?.name || "",
+      uid: pod.metadata?.uid || "",
+      namespace: pod.metadata?.namespace || "",
+      nodeName: pod.spec?.nodeName || "",
       status: pod.status?.reason || phase,
-      phase: phase as Pod['phase'],
+      phase: phase as Pod["phase"],
       containers: containers.map((container: any, index: number) => {
         const status = containerStatuses[index];
         return {
           name: container.name,
           image: container.image,
           ready: status?.ready || false,
-          state: status?.state?.running ? 'running' :
-                 status?.state?.waiting ? 'waiting' :
-                 status?.state?.terminated ? 'terminated' : 'waiting',
+          state: status?.state?.running
+            ? "running"
+            : status?.state?.waiting
+              ? "waiting"
+              : status?.state?.terminated
+                ? "terminated"
+                : "waiting",
         };
       }),
       labels: pod.metadata?.labels || {},
@@ -190,9 +195,9 @@ export class KubernetesService extends EventEmitter {
 
   private transformNamespace(namespace: any): Namespace {
     return {
-      name: namespace.metadata?.name || '',
-      uid: namespace.metadata?.uid || '',
-      status: namespace.status?.phase === 'Terminating' ? 'Terminating' : 'Active',
+      name: namespace.metadata?.name || "",
+      uid: namespace.metadata?.uid || "",
+      status: namespace.status?.phase === "Terminating" ? "Terminating" : "Active",
       podCount: 0, // Will be updated separately
       labels: namespace.metadata?.labels || {},
       annotations: namespace.metadata?.annotations || {},
@@ -206,6 +211,6 @@ export class KubernetesService extends EventEmitter {
 
   disconnect(): void {
     this.connected = false;
-    this.emit('disconnected');
+    this.emit("disconnected");
   }
 }

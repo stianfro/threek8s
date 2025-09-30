@@ -1,10 +1,10 @@
-import * as THREE from 'three';
+import * as THREE from "three";
 
 export enum DetailLevel {
-  HIGH = 'high',     // Close view - show everything
-  MEDIUM = 'medium', // Medium distance - simplified pods
-  LOW = 'low',       // Far view - aggregate representations
-  MINIMAL = 'minimal' // Very far - just node indicators
+  HIGH = "high", // Close view - show everything
+  MEDIUM = "medium", // Medium distance - simplified pods
+  LOW = "low", // Far view - aggregate representations
+  MINIMAL = "minimal", // Very far - just node indicators
 }
 
 export class LODManager {
@@ -14,10 +14,10 @@ export class LODManager {
 
   // Distance thresholds for different detail levels
   private readonly thresholds = {
-    high: 250,    // Closer than 250 units (increased from 150)
-    medium: 450,  // 250-450 units (increased from 300)
-    low: 750,     // 450-750 units (increased from 500)
-    minimal: Infinity // Beyond 750 units
+    high: 250, // Closer than 250 units (increased from 150)
+    medium: 450, // 250-450 units (increased from 300)
+    low: 750, // 450-750 units (increased from 500)
+    minimal: Infinity, // Beyond 750 units
   };
 
   constructor(camera: THREE.Camera) {
@@ -43,7 +43,9 @@ export class LODManager {
     this.currentLevel = newLevel;
 
     if (changed) {
-      console.log(`[LODManager] Detail level changed to: ${newLevel} at distance ${distance.toFixed(1)}`);
+      console.log(
+        `[LODManager] Detail level changed to: ${newLevel} at distance ${distance.toFixed(1)}`,
+      );
     }
 
     return this.currentLevel;

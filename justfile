@@ -160,6 +160,34 @@ lint:
     @echo "🔍 Linting frontend..."
     cd frontend && npm run lint
 
+# Run security checks on all code
+security:
+    @echo "🔒 Running security checks..."
+    @echo ""
+    @echo "Backend Security Scan:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    cd backend && npm run security:check
+    @echo ""
+    @echo "Frontend Security Scan:"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    cd frontend && npm run security:check
+    @echo ""
+    @echo "✅ Security checks complete!"
+
+# Run security linting only (SAST)
+security-lint:
+    @echo "🔍 Running security linting (SAST)..."
+    cd backend && npm run lint:security
+    cd frontend && npm run lint:security
+    @echo "✅ Security linting complete!"
+
+# Run dependency audit only
+security-audit:
+    @echo "📦 Running dependency audit..."
+    cd backend && npm run audit
+    cd frontend && npm run audit
+    @echo "✅ Dependency audit complete!"
+
 # Format all code
 format:
     @echo "💅 Formatting backend code..."
@@ -317,6 +345,11 @@ help:
     @echo "  just test    - Run all tests"
     @echo "  just lint    - Lint all code"
     @echo "  just format  - Format all code"
+    @echo ""
+    @echo "Security:"
+    @echo "  just security       - Run all security checks (SAST + audit)"
+    @echo "  just security-lint  - Run security linting only (SAST)"
+    @echo "  just security-audit - Run dependency audit only"
     @echo ""
     @echo "Testing with KWOK:"
     @echo "  just kwok-setup   - Create test cluster (40 nodes, 3 zones)"

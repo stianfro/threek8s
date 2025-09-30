@@ -10,8 +10,8 @@ export interface RuntimeConfig {
 
 // Default configuration for development
 const defaultConfig: RuntimeConfig = {
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
-  wsUrl: import.meta.env.VITE_WS_URL || 'ws://localhost:3001/ws'
+  apiUrl: import.meta.env.VITE_API_URL || "http://localhost:3001/api",
+  wsUrl: import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws",
 };
 
 let runtimeConfig: RuntimeConfig | null = null;
@@ -28,15 +28,15 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
   try {
     // In development, use build-time env vars
     if (import.meta.env.DEV) {
-      console.log('Using development configuration');
+      console.log("Using development configuration");
       runtimeConfig = defaultConfig;
       return runtimeConfig;
     }
 
     // In production, fetch runtime configuration
-    const response = await fetch('/config.js');
+    const response = await fetch("/config.js");
     if (!response.ok) {
-      console.warn('Failed to load runtime config, using defaults');
+      console.warn("Failed to load runtime config, using defaults");
       runtimeConfig = defaultConfig;
       return runtimeConfig;
     }
@@ -49,22 +49,22 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     if (configMatch) {
       try {
         // Use Function constructor for safer eval
-        const configObj = new Function('return ' + configMatch[1])();
+        const configObj = new Function("return " + configMatch[1])();
         runtimeConfig = {
           apiUrl: configObj.apiUrl || defaultConfig.apiUrl,
-          wsUrl: configObj.wsUrl || defaultConfig.wsUrl
+          wsUrl: configObj.wsUrl || defaultConfig.wsUrl,
         };
-        console.log('Loaded runtime configuration:', runtimeConfig);
+        console.log("Loaded runtime configuration:", runtimeConfig);
       } catch (e) {
-        console.error('Failed to parse runtime config:', e);
+        console.error("Failed to parse runtime config:", e);
         runtimeConfig = defaultConfig;
       }
     } else {
-      console.warn('Invalid runtime config format, using defaults');
+      console.warn("Invalid runtime config format, using defaults");
       runtimeConfig = defaultConfig;
     }
   } catch (error) {
-    console.error('Error loading runtime configuration:', error);
+    console.error("Error loading runtime configuration:", error);
     runtimeConfig = defaultConfig;
   }
 
@@ -77,7 +77,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
  */
 export function getRuntimeConfig(): RuntimeConfig {
   if (!runtimeConfig) {
-    throw new Error('Runtime configuration not loaded. Call loadRuntimeConfig() first.');
+    throw new Error("Runtime configuration not loaded. Call loadRuntimeConfig() first.");
   }
   return runtimeConfig;
 }

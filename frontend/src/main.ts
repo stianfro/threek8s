@@ -1,11 +1,11 @@
-import './style.css';
-import { SceneManager } from './scene/SceneManager';
-import { VisualizationManager } from './visualization/VisualizationManager';
-import { WebSocketService } from './services/WebSocketService';
-import { ApiService } from './services/ApiService';
-import { StateManager } from './services/StateManager';
-import type { StateUpdate, EventMessage } from './types/kubernetes';
-import { loadRuntimeConfig } from './config/runtime';
+import "./style.css";
+import { SceneManager } from "./scene/SceneManager";
+import { VisualizationManager } from "./visualization/VisualizationManager";
+import { WebSocketService } from "./services/WebSocketService";
+import { ApiService } from "./services/ApiService";
+import { StateManager } from "./services/StateManager";
+import type { StateUpdate, EventMessage } from "./types/kubernetes";
+import { loadRuntimeConfig } from "./config/runtime";
 
 // Create main app
 async function initApp() {
@@ -14,11 +14,11 @@ async function initApp() {
   const API_URL = config.apiUrl;
   const WS_URL = config.wsUrl;
 
-  console.log('Using configuration:', { API_URL, WS_URL });
+  console.log("Using configuration:", { API_URL, WS_URL });
   // Create container
-  const app = document.querySelector<HTMLDivElement>('#app');
+  const app = document.querySelector<HTMLDivElement>("#app");
   if (!app) {
-    console.error('App container not found');
+    console.error("App container not found");
     return;
   }
 
@@ -44,9 +44,9 @@ async function initApp() {
   `;
 
   // Get viewport container
-  const viewport = document.getElementById('viewport');
+  const viewport = document.getElementById("viewport");
   if (!viewport) {
-    console.error('Viewport not found');
+    console.error("Viewport not found");
     return;
   }
 
@@ -59,7 +59,7 @@ async function initApp() {
 
   // Set up state change listener
   stateManager.onStateChange((state) => {
-    console.log('[Main] State changed, updating visualization');
+    console.log("[Main] State changed, updating visualization");
     visualizationManager.updateState(state);
     updateUIMetrics(state);
     // Force re-render
@@ -68,27 +68,27 @@ async function initApp() {
 
   // Set up WebSocket event handlers
   wsService.onStateUpdate((update: StateUpdate) => {
-    console.log('[Main] WebSocket state update received');
+    console.log("[Main] WebSocket state update received");
     stateManager.updateFullState(update);
   });
 
   wsService.onEvent((event: EventMessage) => {
-    console.log('[Main] WebSocket event:', event.eventType, event.action);
+    console.log("[Main] WebSocket event:", event.eventType, event.action);
     switch (event.eventType) {
-      case 'node':
+      case "node":
         stateManager.handleNodeEvent(event.action, event.resource as any);
         break;
-      case 'pod':
+      case "pod":
         stateManager.handlePodEvent(event.action, event.resource as any);
         break;
-      case 'namespace':
+      case "namespace":
         stateManager.handleNamespaceEvent(event.action, event.resource as any);
         break;
     }
   });
 
   wsService.onStatusChange((status) => {
-    console.log('[Main] WebSocket status:', status);
+    console.log("[Main] WebSocket status:", status);
     updateConnectionStatus(status);
   });
 
@@ -97,9 +97,9 @@ async function initApp() {
   });
 
   // Set up interaction handlers
-  viewport.addEventListener('mousemove', (e) => visualizationManager.handleMouseMove(e));
-  viewport.addEventListener('click', (e) => visualizationManager.handleClick(e));
-  viewport.addEventListener('dblclick', (e) => visualizationManager.handleDoubleClick(e));
+  viewport.addEventListener("mousemove", (e) => visualizationManager.handleMouseMove(e));
+  viewport.addEventListener("click", (e) => visualizationManager.handleClick(e));
+  viewport.addEventListener("dblclick", (e) => visualizationManager.handleDoubleClick(e));
 
   // Start animation loop
   sceneManager.start();
@@ -116,7 +116,7 @@ async function initApp() {
 
     // Check health first
     const health = await apiService.getHealth();
-    console.log('API health:', health);
+    console.log("API health:", health);
 
     // Get cluster info
     const clusterInfo = await apiService.getClusterInfo();
@@ -131,18 +131,18 @@ async function initApp() {
     wsService.connect();
 
     showLoadingScreen(false);
-    console.log('ThreeK8s initialized successfully');
+    console.log("ThreeK8s initialized successfully");
   } catch (error) {
-    console.error('Failed to initialize:', error);
+    console.error("Failed to initialize:", error);
     showLoadingScreen(false);
-    showError('Failed to connect to backend. Please check if the server is running.');
+    showError("Failed to connect to backend. Please check if the server is running.");
   }
 }
 
 // UI Update functions
 function updateConnectionStatus(status: string) {
-  const indicator = document.querySelector('.status-indicator');
-  const text = document.querySelector('.status-text');
+  const indicator = document.querySelector(".status-indicator");
+  const text = document.querySelector(".status-text");
 
   if (indicator) {
     indicator.className = `status-indicator ${status}`;
@@ -150,41 +150,41 @@ function updateConnectionStatus(status: string) {
 
   if (text) {
     const statusTexts: Record<string, string> = {
-      'connecting': 'Connecting...',
-      'connected': 'Connected',
-      'disconnected': 'Disconnected',
-      'error': 'Connection Error'
+      connecting: "Connecting...",
+      connected: "Connected",
+      disconnected: "Disconnected",
+      error: "Connection Error",
     };
-    text.textContent = statusTexts[status] || 'Unknown';
+    text.textContent = statusTexts[status] || "Unknown";
   }
 }
 
 function updateClusterInfo(info: any) {
-  const nameElement = document.querySelector('.cluster-name');
+  const nameElement = document.querySelector(".cluster-name");
   if (nameElement) {
-    nameElement.textContent = info.name || 'Unknown Cluster';
+    nameElement.textContent = info.name || "Unknown Cluster";
   }
 }
 
 function updateUIMetrics(state: any) {
-  const nodeCount = document.getElementById('node-count');
-  const podCount = document.getElementById('pod-count');
+  const nodeCount = document.getElementById("node-count");
+  const podCount = document.getElementById("pod-count");
 
   if (nodeCount) {
-    nodeCount.textContent = state.metrics?.nodeCount?.toString() || '0';
+    nodeCount.textContent = state.metrics?.nodeCount?.toString() || "0";
   }
 
   if (podCount) {
-    podCount.textContent = state.metrics?.podCount?.toString() || '0';
+    podCount.textContent = state.metrics?.podCount?.toString() || "0";
   }
 }
 
 function showLoadingScreen(show: boolean) {
-  let loadingScreen = document.querySelector('.loading-screen');
+  let loadingScreen = document.querySelector(".loading-screen");
 
   if (show && !loadingScreen) {
-    loadingScreen = document.createElement('div');
-    loadingScreen.className = 'loading-screen';
+    loadingScreen = document.createElement("div");
+    loadingScreen.className = "loading-screen";
     loadingScreen.innerHTML = `
       <div class="loading-spinner"></div>
       <div class="loading-text">Connecting to Kubernetes cluster...</div>
@@ -196,13 +196,13 @@ function showLoadingScreen(show: boolean) {
 }
 
 function showError(message: string) {
-  const existingError = document.querySelector('.error-message');
+  const existingError = document.querySelector(".error-message");
   if (existingError) {
     existingError.remove();
   }
 
-  const errorElement = document.createElement('div');
-  errorElement.className = 'error-message';
+  const errorElement = document.createElement("div");
+  errorElement.className = "error-message";
   errorElement.textContent = message;
   document.body.appendChild(errorElement);
 
@@ -212,8 +212,8 @@ function showError(message: string) {
 }
 
 // Initialize app when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
 } else {
   initApp();
 }

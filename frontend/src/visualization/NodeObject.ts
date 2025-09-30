@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import type { KubernetesNode } from '../types/kubernetes';
-import { GeometryPool } from './GeometryPool';
+import * as THREE from "three";
+import type { KubernetesNode } from "../types/kubernetes";
+import { GeometryPool } from "./GeometryPool";
 
 export class NodeObject extends THREE.Group {
   private node: KubernetesNode;
@@ -28,7 +28,7 @@ export class NodeObject extends THREE.Group {
     // T012 FIX: Re-enable raycasting for nodes
     // Use userData to identify as hoverable node with lower priority than pods
     this.mesh.userData.hoverable = true;
-    this.mesh.userData.type = 'node';
+    this.mesh.userData.type = "node";
     this.mesh.userData.nodeData = node;
     this.mesh.renderOrder = -1;
     this.add(this.mesh);
@@ -39,7 +39,7 @@ export class NodeObject extends THREE.Group {
       color: color,
       linewidth: 2,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.8,
     });
     this.edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
     // Keep edges non-hoverable to avoid interference
@@ -54,8 +54,8 @@ export class NodeObject extends THREE.Group {
     this.add(this.outline);
 
     this.userData = {
-      type: 'node',
-      data: node
+      type: "node",
+      data: node,
     };
 
     this.name = `node-${node.name}`;
@@ -63,14 +63,14 @@ export class NodeObject extends THREE.Group {
 
   private getNodeColor(): number {
     switch (this.node.status) {
-      case 'Ready':
-        return 0x4CAF50; // Green
-      case 'NotReady':
-        return 0xFF9800; // Orange
-      case 'Unknown':
-        return 0x9E9E9E; // Gray
+      case "Ready":
+        return 0x4caf50; // Green
+      case "NotReady":
+        return 0xff9800; // Orange
+      case "Unknown":
+        return 0x9e9e9e; // Gray
       default:
-        return 0x607D8B; // Blue-gray
+        return 0x607d8b; // Blue-gray
     }
   }
 
@@ -105,35 +105,37 @@ export class NodeObject extends THREE.Group {
   // T013: Add tooltip data provider for nodes
   public getTooltipData(): any {
     const node = this.node;
-    const podCount = this.children.filter(child =>
-      child.userData?.type === 'pod' || child instanceof THREE.Object3D && child.userData?.type === 'pod'
+    const podCount = this.children.filter(
+      (child) =>
+        child.userData?.type === "pod" ||
+        (child instanceof THREE.Object3D && child.userData?.type === "pod"),
     ).length;
 
     return {
-      type: 'node',
+      type: "node",
       name: node.name,
       status: node.status,
-      role: node.role || 'worker',
+      role: node.role || "worker",
       capacity: {
-        cpu: node.capacity?.cpu || 'N/A',
-        memory: node.capacity?.memory || 'N/A'
+        cpu: node.capacity?.cpu || "N/A",
+        memory: node.capacity?.memory || "N/A",
       },
       allocatable: {
-        cpu: node.allocatable?.cpu || 'N/A',
-        memory: node.allocatable?.memory || 'N/A'
+        cpu: node.allocatable?.cpu || "N/A",
+        memory: node.allocatable?.memory || "N/A",
       },
       podCount: podCount,
-      maxPods: parseInt(node.capacity?.pods || '110'),
-      os: node.operatingSystem || 'linux',
-      kernelVersion: node.architecture || 'N/A',
-      kubeletVersion: node.kubeletVersion || 'N/A',
-      containerRuntime: node.containerRuntimeVersion || 'N/A',
-      age: this.formatAge(node.creationTimestamp)
+      maxPods: parseInt(node.capacity?.pods || "110"),
+      os: node.operatingSystem || "linux",
+      kernelVersion: node.architecture || "N/A",
+      kubeletVersion: node.kubeletVersion || "N/A",
+      containerRuntime: node.containerRuntimeVersion || "N/A",
+      age: this.formatAge(node.creationTimestamp),
     };
   }
 
   private formatAge(timestamp?: string): string {
-    if (!timestamp) return 'N/A';
+    if (!timestamp) return "N/A";
     const created = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - created.getTime();
@@ -161,7 +163,10 @@ export class NodeObject extends THREE.Group {
     return position;
   }
 
-  public getPodSlotInfoWorldSpace(index: number, totalPods: number): { position: THREE.Vector3, size: number } {
+  public getPodSlotInfoWorldSpace(
+    index: number,
+    totalPods: number,
+  ): { position: THREE.Vector3; size: number } {
     // Calculate pod positions in world space directly
     // This accounts for the node's current position and scale
 
@@ -171,7 +176,7 @@ export class NodeObject extends THREE.Group {
 
     // Simple margin calculation
     const margin = 2.0 * this.scale.x; // Margin from node edges
-    const availableSpace = actualNodeSize - (2 * margin);
+    const availableSpace = actualNodeSize - 2 * margin;
 
     // Calculate optimal grid layout
     const cols = Math.ceil(Math.sqrt(totalPods));
@@ -211,22 +216,26 @@ export class NodeObject extends THREE.Group {
     const worldPosition = new THREE.Vector3(
       this.position.x + localX,
       this.position.y + localY,
-      this.position.z + localZ
+      this.position.z + localZ,
     );
 
     return {
       position: worldPosition,
-      size: podSize
+      size: podSize,
     };
   }
 
-  public getPodSlotInfo(index: number, totalPods: number, nodeScale: number = 1): { position: THREE.Vector3, size: number } {
+  public getPodSlotInfo(
+    index: number,
+    totalPods: number,
+    nodeScale: number = 1,
+  ): { position: THREE.Vector3; size: number } {
     // Keep the old method for backwards compatibility
     // Calculate grid dimensions based on BASE node size (geometry size)
     const baseNodeSize = 20;
     const nodeHeight = 0.1; // Match the flatter node thickness
     const margin = 1; // Margin in local space
-    const availableSpace = baseNodeSize - (2 * margin);
+    const availableSpace = baseNodeSize - 2 * margin;
 
     // Calculate optimal grid layout
     const cols = Math.ceil(Math.sqrt(totalPods));
@@ -250,15 +259,15 @@ export class NodeObject extends THREE.Group {
     const row = Math.floor(index / cols);
 
     // Position pods to fill the entire node area (in local node space)
-    const x = -availableSpace/2 + spacingX/2 + col * spacingX;
+    const x = -availableSpace / 2 + spacingX / 2 + col * spacingX;
     // Pod height is 0.3 * actualPodSize (flatter pods)
     const podHeight = actualPodSize * 0.3;
     const y = nodeHeight / 2 + podHeight / 2; // Place pods directly on node surface
-    const z = -availableSpace/2 + spacingZ/2 + row * spacingZ;
+    const z = -availableSpace / 2 + spacingZ / 2 + row * spacingZ;
 
     return {
       position: new THREE.Vector3(x, y, z),
-      size: actualPodSize * nodeScale // Scale the pod size by the node's scale
+      size: actualPodSize * nodeScale, // Scale the pod size by the node's scale
     };
   }
 

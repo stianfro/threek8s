@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import type { Pod } from '../types/kubernetes';
+import * as THREE from "three";
+import type { Pod } from "../types/kubernetes";
 
 interface PodInstance {
   pod: Pod;
@@ -16,9 +16,17 @@ interface PodInstance {
 export class PodInstanceManager {
   private static readonly MAX_INSTANCES = 10000;
   private static readonly POD_STATUSES = [
-    'Running', 'Pending', 'Succeeded', 'Failed', 'Unknown',
-    'Terminating', 'ContainerCreating', 'CrashLoopBackOff',
-    'ImagePullBackOff', 'ErrImagePull', 'CreateContainerError'
+    "Running",
+    "Pending",
+    "Succeeded",
+    "Failed",
+    "Unknown",
+    "Terminating",
+    "ContainerCreating",
+    "CrashLoopBackOff",
+    "ImagePullBackOff",
+    "ErrImagePull",
+    "CreateContainerError",
   ];
 
   private instancedMeshes: Map<string, THREE.InstancedMesh> = new Map();
@@ -43,21 +51,17 @@ export class PodInstanceManager {
   private initializeInstancedMeshes(): void {
     const geometry = new THREE.BoxGeometry(0.8, 0.24, 0.8);
 
-    PodInstanceManager.POD_STATUSES.forEach(status => {
+    PodInstanceManager.POD_STATUSES.forEach((status) => {
       const color = this.getStatusColor(status);
       const material = new THREE.MeshPhongMaterial({
         color: color,
         transparent: true,
         opacity: 0.95,
         emissive: color,
-        emissiveIntensity: 0.2
+        emissiveIntensity: 0.2,
       });
 
-      const mesh = new THREE.InstancedMesh(
-        geometry,
-        material,
-        PodInstanceManager.MAX_INSTANCES
-      );
+      const mesh = new THREE.InstancedMesh(geometry, material, PodInstanceManager.MAX_INSTANCES);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.count = 0; // Start with no instances visible
@@ -71,23 +75,26 @@ export class PodInstanceManager {
 
   private getStatusColor(status: string): number {
     const colors: Record<string, number> = {
-      'Running': 0x2196F3,
-      'Pending': 0xFFC107,
-      'Succeeded': 0x4CAF50,
-      'Failed': 0xF44336,
-      'Unknown': 0x9E9E9E,
-      'Terminating': 0xFF9800,
-      'ContainerCreating': 0x00BCD4,
-      'CrashLoopBackOff': 0xE91E63,
-      'ImagePullBackOff': 0x9C27B0,
-      'ErrImagePull': 0x673AB7,
-      'CreateContainerError': 0x795548
+      Running: 0x2196f3,
+      Pending: 0xffc107,
+      Succeeded: 0x4caf50,
+      Failed: 0xf44336,
+      Unknown: 0x9e9e9e,
+      Terminating: 0xff9800,
+      ContainerCreating: 0x00bcd4,
+      CrashLoopBackOff: 0xe91e63,
+      ImagePullBackOff: 0x9c27b0,
+      ErrImagePull: 0x673ab7,
+      CreateContainerError: 0x795548,
     };
-    return colors[status] || 0x607D8B;
+    return colors[status] || 0x607d8b;
   }
 
-  public updatePods(pods: Pod[], getPositionForPod: (pod: Pod) => { position: THREE.Vector3, size: number }): void {
-    const currentPodIds = new Set(pods.map(p => p.uid));
+  public updatePods(
+    pods: Pod[],
+    getPositionForPod: (pod: Pod) => { position: THREE.Vector3; size: number },
+  ): void {
+    const currentPodIds = new Set(pods.map((p) => p.uid));
 
     // Mark pods for deletion
     this.podInstances.forEach((instance, uid) => {
@@ -98,7 +105,7 @@ export class PodInstanceManager {
     });
 
     // Update or create pod instances
-    pods.forEach(podData => {
+    pods.forEach((podData) => {
       let instance = this.podInstances.get(podData.uid);
       const positionInfo = getPositionForPod(podData);
 
@@ -116,7 +123,7 @@ export class PodInstanceManager {
           currentScale: 0,
           animationProgress: 0,
           isNew: true,
-          isDeleting: false
+          isDeleting: false,
         };
 
         statusGroup.add(podData.uid);
@@ -147,17 +154,17 @@ export class PodInstanceManager {
 
   private updateInstanceMatrices(): void {
     // Reset all counts
-    this.instancedMeshes.forEach(mesh => {
+    this.instancedMeshes.forEach((mesh) => {
       mesh.count = 0;
     });
 
     // Group instances by status and update matrices
     const statusIndices: Map<string, number> = new Map();
-    PodInstanceManager.POD_STATUSES.forEach(status => {
+    PodInstanceManager.POD_STATUSES.forEach((status) => {
       statusIndices.set(status, 0);
     });
 
-    this.podInstances.forEach(instance => {
+    this.podInstances.forEach((instance) => {
       const mesh = this.instancedMeshes.get(instance.pod.status);
       if (!mesh) return;
 
@@ -169,11 +176,8 @@ export class PodInstanceManager {
       this.tempQuaternion.identity();
 
       // Add rotation for pending pods
-      if (instance.pod.status === 'Pending') {
-        this.tempQuaternion.setFromAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          Date.now() * 0.001
-        );
+      if (instance.pod.status === "Pending") {
+        this.tempQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Date.now() * 0.001);
       }
 
       this.tempMatrix.compose(this.tempPosition, this.tempQuaternion, this.tempScale);
@@ -181,7 +185,7 @@ export class PodInstanceManager {
 
       // Update color intensity for selected/animated pods
       if (instance.isNew) {
-        this.tempColor.setHex(0xFFFFFF);
+        this.tempColor.setHex(0xffffff);
       } else {
         this.tempColor.setHex(this.getStatusColor(instance.pod.status));
       }
@@ -214,7 +218,7 @@ export class PodInstanceManager {
         instance.currentScale = THREE.MathUtils.lerp(
           instance.currentScale,
           instance.targetScale,
-          deltaTime * this.scaleSpeed
+          deltaTime * this.scaleSpeed,
         );
         changed = true;
 
@@ -240,7 +244,7 @@ export class PodInstanceManager {
     });
 
     // Remove deleted pods
-    toDelete.forEach(uid => {
+    toDelete.forEach((uid) => {
       const instance = this.podInstances.get(uid);
       if (instance) {
         const statusGroup = this.statusGroups.get(instance.pod.status);
@@ -263,15 +267,17 @@ export class PodInstanceManager {
     this.instancedMeshes.forEach((mesh, status) => {
       const intersects = raycaster.intersectObject(mesh);
       if (intersects.length > 0) {
-        const instanceId = intersects[0].instanceId;
+        const firstIntersect = intersects[0];
+        if (!firstIntersect) return;
+        const instanceId = firstIntersect.instanceId;
         if (instanceId !== undefined) {
           // Find pod by status and instance index
           let currentIndex = 0;
           for (const [, instance] of this.podInstances.entries()) {
             if (instance.pod.status === status) {
               if (currentIndex === instanceId) {
-                if (intersects[0].distance < closestDistance) {
-                  closestDistance = intersects[0].distance;
+                if (firstIntersect.distance < closestDistance) {
+                  closestDistance = firstIntersect.distance;
                   closestPod = instance.pod;
                 }
                 break;
@@ -292,19 +298,19 @@ export class PodInstanceManager {
 
   public getStats(): { instances: number; meshes: number; drawCalls: number } {
     let drawCalls = 0;
-    this.instancedMeshes.forEach(mesh => {
+    this.instancedMeshes.forEach((mesh) => {
       if (mesh.count > 0) drawCalls++;
     });
 
     return {
       instances: this.podInstances.size,
       meshes: this.instancedMeshes.size,
-      drawCalls
+      drawCalls,
     };
   }
 
   public dispose(): void {
-    this.instancedMeshes.forEach(mesh => {
+    this.instancedMeshes.forEach((mesh) => {
       this.parent.remove(mesh);
       if (mesh.geometry) mesh.geometry.dispose();
       if (mesh.material instanceof THREE.Material) {

@@ -1,10 +1,10 @@
-import { Vector3, ResourceInfo, NodeCondition, NodeStatus } from './ValueObjects';
+import { Vector3, ResourceInfo, NodeCondition, NodeStatus } from "./ValueObjects";
 
 export interface KubernetesNode {
   name: string;
   uid: string;
   status: NodeStatus;
-  role: 'master' | 'worker' | 'control-plane';
+  role: "master" | "worker" | "control-plane";
   capacity: ResourceInfo;
   allocatable?: ResourceInfo;
   conditions: NodeCondition[];
@@ -26,7 +26,7 @@ export class KubernetesNodeModel implements KubernetesNode {
   name: string;
   uid: string;
   status: NodeStatus;
-  role: 'master' | 'worker' | 'control-plane';
+  role: "master" | "worker" | "control-plane";
   capacity: ResourceInfo;
   allocatable?: ResourceInfo;
   conditions: NodeCondition[];
@@ -50,24 +50,24 @@ export class KubernetesNodeModel implements KubernetesNode {
   }
 
   isReady(): boolean {
-    const readyCondition = this.conditions.find(c => c.type === 'Ready');
-    return readyCondition?.status === 'True';
+    const readyCondition = this.conditions.find((c) => c.type === "Ready");
+    return readyCondition?.status === "True";
   }
 
   isMaster(): boolean {
-    return this.role === 'master' || this.role === 'control-plane';
+    return this.role === "master" || this.role === "control-plane";
   }
 
   getCapacityInGB(): number {
     const memory = this.capacity.memory;
     // Convert memory string (e.g., "8Gi") to GB
     const match = memory.match(/(\d+)([A-Za-z]+)/);
-    if (match) {
+    if (match && match[1] && match[2]) {
       const value = parseInt(match[1]);
       const unit = match[2];
-      if (unit === 'Gi') return value;
-      if (unit === 'Mi') return value / 1024;
-      if (unit === 'Ki') return value / (1024 * 1024);
+      if (unit === "Gi") return value;
+      if (unit === "Mi") return value / 1024;
+      if (unit === "Ki") return value / (1024 * 1024);
     }
     return 0;
   }

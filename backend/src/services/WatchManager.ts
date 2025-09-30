@@ -1,7 +1,6 @@
-import { Watch, KubeConfig, CoreV1Api } from '@kubernetes/client-node';
-import { EventEmitter } from 'events';
-import { WatchEvent, EventType } from '../models/Events';
-import { KubernetesService } from './KubernetesService';
+import { Watch, KubeConfig, CoreV1Api } from "@kubernetes/client-node";
+import { EventEmitter } from "events";
+import { WatchEvent, EventType } from "../models/Events";
 
 export class WatchManager extends EventEmitter {
   private watch: Watch;
@@ -25,7 +24,7 @@ export class WatchManager extends EventEmitter {
 
   async startWatching(): Promise<void> {
     if (this.isWatching) {
-      console.log('Already watching cluster resources');
+      console.log("Already watching cluster resources");
       return;
     }
 
@@ -36,62 +35,62 @@ export class WatchManager extends EventEmitter {
   }
 
   private async watchNodes(): Promise<void> {
-    const path = '/api/v1/nodes';
+    const path = "/api/v1/nodes";
 
     try {
       this.nodeWatchRequest = await this.watch.watch(
         path,
         {},
-        (type: string, apiObj: any, watchObj: any) => {
-          this.handleWatchEvent('node', type as EventType, apiObj);
+        (type: string, apiObj: any, _watchObj: any) => {
+          this.handleWatchEvent("node", type as EventType, apiObj);
         },
         (error: any) => {
-          this.handleWatchError('node', error);
-        }
+          this.handleWatchError("node", error);
+        },
       );
     } catch (error) {
-      console.error('Failed to start node watch:', error);
-      this.emit('error', { resource: 'node', error });
+      console.error("Failed to start node watch:", error);
+      this.emit("error", { resource: "node", error });
     }
   }
 
   private async watchPods(): Promise<void> {
-    const path = '/api/v1/pods';
+    const path = "/api/v1/pods";
 
     try {
       this.podWatchRequest = await this.watch.watch(
         path,
         { allowWatchBookmarks: true },
-        (type: string, apiObj: any, watchObj: any) => {
-          this.handleWatchEvent('pod', type as EventType, apiObj);
+        (type: string, apiObj: any, _watchObj: any) => {
+          this.handleWatchEvent("pod", type as EventType, apiObj);
         },
         (error: any) => {
-          this.handleWatchError('pod', error);
-        }
+          this.handleWatchError("pod", error);
+        },
       );
     } catch (error) {
-      console.error('Failed to start pod watch:', error);
-      this.emit('error', { resource: 'pod', error });
+      console.error("Failed to start pod watch:", error);
+      this.emit("error", { resource: "pod", error });
     }
   }
 
   private async watchNamespaces(): Promise<void> {
-    const path = '/api/v1/namespaces';
+    const path = "/api/v1/namespaces";
 
     try {
       this.namespaceWatchRequest = await this.watch.watch(
         path,
         {},
-        (type: string, apiObj: any, watchObj: any) => {
-          this.handleWatchEvent('namespace', type as EventType, apiObj);
+        (type: string, apiObj: any, _watchObj: any) => {
+          this.handleWatchEvent("namespace", type as EventType, apiObj);
         },
         (error: any) => {
-          this.handleWatchError('namespace', error);
-        }
+          this.handleWatchError("namespace", error);
+        },
       );
     } catch (error) {
-      console.error('Failed to start namespace watch:', error);
-      this.emit('error', { resource: 'namespace', error });
+      console.error("Failed to start namespace watch:", error);
+      this.emit("error", { resource: "namespace", error });
     }
   }
 
@@ -99,29 +98,29 @@ export class WatchManager extends EventEmitter {
     const event: WatchEvent = {
       type,
       object: apiObj,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // Emit specific events based on resource type
     switch (resource) {
-      case 'node':
-        this.emit('nodeEvent', event);
+      case "node":
+        this.emit("nodeEvent", event);
         break;
-      case 'pod':
-        this.emit('podEvent', event);
+      case "pod":
+        this.emit("podEvent", event);
         break;
-      case 'namespace':
-        this.emit('namespaceEvent', event);
+      case "namespace":
+        this.emit("namespaceEvent", event);
         break;
     }
 
     // Also emit a general event
-    this.emit('watchEvent', { resource, ...event });
+    this.emit("watchEvent", { resource, ...event });
   }
 
   private handleWatchError(resource: string, error: any): void {
     console.error(`Watch error for ${resource}:`, error);
-    this.emit('watchError', { resource, error });
+    this.emit("watchError", { resource, error });
 
     // Attempt to reconnect
     if (this.isWatching) {
@@ -132,25 +131,27 @@ export class WatchManager extends EventEmitter {
   private scheduleReconnect(resource: string): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error(`Max reconnection attempts reached for ${resource}`);
-      this.emit('maxReconnectAttemptsReached', { resource });
+      this.emit("maxReconnectAttemptsReached", { resource });
       return;
     }
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.min(this.reconnectAttempts, 5);
 
-    console.log(`Scheduling reconnect for ${resource} in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    console.log(
+      `Scheduling reconnect for ${resource} in ${delay}ms (attempt ${this.reconnectAttempts})`,
+    );
 
     this.reconnectTimeout = setTimeout(async () => {
       try {
         switch (resource) {
-          case 'node':
+          case "node":
             await this.watchNodes();
             break;
-          case 'pod':
+          case "pod":
             await this.watchPods();
             break;
-          case 'namespace':
+          case "namespace":
             await this.watchNamespaces();
             break;
         }
@@ -187,7 +188,7 @@ export class WatchManager extends EventEmitter {
     }
 
     this.reconnectAttempts = 0;
-    this.emit('watchingStopped');
+    this.emit("watchingStopped");
   }
 
   isActive(): boolean {
