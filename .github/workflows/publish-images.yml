@@ -95,6 +95,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.event_name == 'release' }}
 
       - name: Build and push ${{ matrix.service }} Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
@@ -106,3 +107,18 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
           provenance: true
           sbom: true
+
+      - name: Run Trivy vulnerability scanner on published image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:${{ steps.version.outputs.tag }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          category: 'release-container-${{ matrix.service }}'

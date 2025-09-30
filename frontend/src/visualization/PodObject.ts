@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import type { Pod } from '../types/kubernetes';
-import { GeometryPool } from './GeometryPool';
+import * as THREE from "three";
+import type { Pod } from "../types/kubernetes";
+import { GeometryPool } from "./GeometryPool";
 
 export class PodObject extends THREE.Group {
   private pod: Pod;
@@ -44,7 +44,7 @@ export class PodObject extends THREE.Group {
         transparent: true,
         opacity: 0.95,
         emissive: color,
-        emissiveIntensity: 0.2
+        emissiveIntensity: 0.2,
       });
 
       this.mesh = new THREE.Mesh(geometry, material);
@@ -57,15 +57,15 @@ export class PodObject extends THREE.Group {
         color: color,
         transparent: true,
         opacity: 0.2,
-        side: THREE.BackSide
+        side: THREE.BackSide,
       });
       this.outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
       this.add(this.outline);
     }
 
     this.userData = {
-      type: 'pod',
-      data: pod
+      type: "pod",
+      data: pod,
     };
 
     this.name = `pod-${pod.namespace}-${pod.name}`;
@@ -73,30 +73,30 @@ export class PodObject extends THREE.Group {
 
   private getPodColor(): number {
     switch (this.pod.status) {
-      case 'Running':
-        return 0x2196F3; // Blue
-      case 'Pending':
-        return 0xFFC107; // Yellow
-      case 'Succeeded':
-        return 0x4CAF50; // Green
-      case 'Failed':
-        return 0xF44336; // Red
-      case 'Unknown':
-        return 0x9E9E9E; // Gray
-      case 'Terminating':
-        return 0xFF9800; // Orange
-      case 'ContainerCreating':
-        return 0x00BCD4; // Cyan
-      case 'CrashLoopBackOff':
-        return 0xE91E63; // Pink
-      case 'ImagePullBackOff':
-        return 0x9C27B0; // Purple
-      case 'ErrImagePull':
-        return 0x673AB7; // Deep Purple
-      case 'CreateContainerError':
+      case "Running":
+        return 0x2196f3; // Blue
+      case "Pending":
+        return 0xffc107; // Yellow
+      case "Succeeded":
+        return 0x4caf50; // Green
+      case "Failed":
+        return 0xf44336; // Red
+      case "Unknown":
+        return 0x9e9e9e; // Gray
+      case "Terminating":
+        return 0xff9800; // Orange
+      case "ContainerCreating":
+        return 0x00bcd4; // Cyan
+      case "CrashLoopBackOff":
+        return 0xe91e63; // Pink
+      case "ImagePullBackOff":
+        return 0x9c27b0; // Purple
+      case "ErrImagePull":
+        return 0x673ab7; // Deep Purple
+      case "CreateContainerError":
         return 0x795548; // Brown
       default:
-        return 0x607D8B; // Blue-gray
+        return 0x607d8b; // Blue-gray
     }
   }
 
@@ -113,7 +113,7 @@ export class PodObject extends THREE.Group {
       this.outline.material.color.setHex(color);
     }
 
-    if (pod.status === 'Terminating') {
+    if (pod.status === "Terminating") {
       this.targetScale = 0;
     }
   }
@@ -160,11 +160,11 @@ export class PodObject extends THREE.Group {
       }
     }
 
-    if (this.selected || this.pod.status === 'Pending') {
+    if (this.selected || this.pod.status === "Pending") {
       this.mesh.rotation.y += deltaTime * 1.5;
     }
 
-    if (this.pod.status === 'CrashLoopBackOff' || this.pod.status === 'Failed') {
+    if (this.pod.status === "CrashLoopBackOff" || this.pod.status === "Failed") {
       const shake = Math.sin(Date.now() * 0.01) * 0.05;
       this.position.x += shake;
     }
@@ -196,7 +196,7 @@ export class PodObject extends THREE.Group {
 
     // Add red flash effect on deletion
     if (this.mesh.material instanceof THREE.MeshPhongMaterial) {
-      this.mesh.material.emissive.setHex(0xFF0000);
+      this.mesh.material.emissive.setHex(0xff0000);
       this.mesh.material.emissiveIntensity = 0.8;
     }
   }

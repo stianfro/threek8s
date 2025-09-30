@@ -18,10 +18,22 @@ tests/
 ```
 
 ## Commands
-npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] npm run lint
+npm test
+npm run lint
+npm run lint:security
+npm run audit
+npm run security:check
 
 ## Code Style
 JavaScript/TypeScript (ES2022+), Node.js 20+: Follow standard conventions
+
+## Security Requirements
+- **SAST**: All code must pass security linting (eslint-plugin-security, eslint-plugin-no-secrets)
+- **Dependencies**: Run `npm audit` before commits; no HIGH/CRITICAL vulnerabilities allowed
+- **TypeScript**: Strict mode enabled with enhanced security options (noUncheckedIndexedAccess, noImplicitReturns)
+- **Containers**: All Docker images scanned with Trivy before release
+- **Kubernetes**: Application runs with minimal RBAC permissions, non-root user (UID 1001)
+- **Secrets**: Never commit hardcoded secrets; use environment variables or Kubernetes Secrets
 
 ## Recent Changes
 - 005-fix-hover-info-pods-nodes: Added JavaScript/TypeScript (ES2022+), Node.js 20+ + Three.js (3D visualization), @kubernetes/client-node (K8s API), Express/WebSocket (real-time)

@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import type { KubernetesNode } from '../types/kubernetes';
+import * as THREE from "three";
+import type { KubernetesNode } from "../types/kubernetes";
 
 export interface ZoneGroup {
   zoneName: string;
@@ -45,14 +45,14 @@ export class ZoneManager {
     const zoneCount = zoneGroups.length;
     const { cols: zoneCols, rows: zoneRows } = this.calculateGridDimensions(
       zoneCount,
-      this.viewport.width / this.viewport.height
+      this.viewport.width / this.viewport.height,
     );
 
-    console.log('[ZoneManager] Zone grid layout:', {
+    console.log("[ZoneManager] Zone grid layout:", {
       zoneCount,
       zoneCols,
       zoneRows,
-      viewport: this.viewport
+      viewport: this.viewport,
     });
 
     // Calculate size allocation for each zone based on node count
@@ -61,7 +61,6 @@ export class ZoneManager {
 
     // Calculate positions and internal layouts for each zone
     const zones: ZoneGroup[] = [];
-    let currentRow = 0;
     let currentCol = 0;
     let rowHeight = 0;
     let xOffset = 0;
@@ -69,17 +68,22 @@ export class ZoneManager {
 
     zoneGroups.forEach((group, index) => {
       const zoneSize = zoneSizes[index];
+      if (!zoneSize) {
+        console.error("Zone size not found for index", index);
+        return;
+      }
+
       const { nodePositions, nodeScale } = this.calculateNodeLayoutInZone(
         group.nodes,
         zoneSize.width,
-        zoneSize.height
+        zoneSize.height,
       );
 
       // Calculate zone position in world space (position is at zone center)
       const zonePosition = new THREE.Vector3(
         xOffset + zoneSize.width / 2,
         0,
-        zOffset + zoneSize.height / 2
+        zOffset + zoneSize.height / 2,
       );
 
       zones.push({
@@ -88,7 +92,7 @@ export class ZoneManager {
         position: zonePosition,
         size: zoneSize,
         nodePositions,
-        nodeScale
+        nodeScale,
       });
 
       // Update grid position
@@ -98,7 +102,6 @@ export class ZoneManager {
 
       if (currentCol >= zoneCols) {
         currentCol = 0;
-        currentRow++;
         xOffset = 0;
         zOffset += rowHeight + interZoneSpacing; // Add spacing between rows
         rowHeight = 0;
@@ -113,7 +116,9 @@ export class ZoneManager {
       let lastRowWidth = 0;
 
       for (let i = lastRowStartIndex; i < zones.length; i++) {
-        lastRowWidth += zones[i].size.width;
+        const zone = zones[i];
+        if (!zone) continue;
+        lastRowWidth += zone.size.width;
         if (i < zones.length - 1) {
           lastRowWidth += interZoneSpacing;
         }
@@ -121,64 +126,65 @@ export class ZoneManager {
 
       // Calculate centering offset for last row
       // Total grid width is based on zoneCols
-      const fullRowWidth = zones.slice(0, Math.min(zoneCols, zones.length))
+      const fullRowWidth = zones
+        .slice(0, Math.min(zoneCols, zones.length))
         .reduce((sum, z, i) => sum + z.size.width + (i < zoneCols - 1 ? interZoneSpacing : 0), 0);
 
       const rowCenterOffset = (fullRowWidth - lastRowWidth) / 2;
 
       // Apply offset to last row zones
       for (let i = lastRowStartIndex; i < zones.length; i++) {
-        zones[i].position.x += rowCenterOffset;
+        const zone = zones[i];
+        if (!zone) continue;
+        zone.position.x += rowCenterOffset;
       }
     }
 
     // Calculate total bounds
-    const totalWidth = Math.max(...zones.map(z => z.position.x + z.size.width / 2));
-    const totalHeight = Math.max(...zones.map(z => z.position.z + z.size.height / 2));
+    const totalWidth = Math.max(...zones.map((z) => z.position.x + z.size.width / 2));
+    const totalHeight = Math.max(...zones.map((z) => z.position.z + z.size.height / 2));
 
     // Center all zones around origin
     const centerOffsetX = totalWidth / 2;
     const centerOffsetZ = totalHeight / 2;
 
-    zones.forEach(zone => {
+    zones.forEach((zone) => {
       zone.position.x -= centerOffsetX;
       zone.position.z -= centerOffsetZ;
 
       // Update node positions relative to zone center
-      zone.nodePositions = zone.nodePositions.map(pos =>
-        new THREE.Vector3(
-          zone.position.x + pos.x,
-          pos.y,
-          zone.position.z + pos.z
-        )
+      zone.nodePositions = zone.nodePositions.map(
+        (pos) => new THREE.Vector3(zone.position.x + pos.x, pos.y, zone.position.z + pos.z),
       );
     });
 
-    console.log('[ZoneManager] Layout complete:', {
+    console.log("[ZoneManager] Layout complete:", {
       zoneCount: zones.length,
       totalBounds: { width: totalWidth, height: totalHeight },
-      zones: zones.map(z => ({
+      zones: zones.map((z) => ({
         name: z.zoneName,
         nodeCount: z.nodes.length,
         position: { x: z.position.x, z: z.position.z },
-        size: z.size
-      }))
+        size: z.size,
+      })),
     });
 
     return {
       zones,
-      totalBounds: { width: totalWidth, height: totalHeight }
+      totalBounds: { width: totalWidth, height: totalHeight },
     };
   }
 
   /**
    * Groups nodes by their zone label
    */
-  private groupNodesByZone(nodes: KubernetesNode[]): { zoneName: string; nodes: KubernetesNode[] }[] {
+  private groupNodesByZone(
+    nodes: KubernetesNode[],
+  ): { zoneName: string; nodes: KubernetesNode[] }[] {
     const zoneMap = new Map<string, KubernetesNode[]>();
 
-    nodes.forEach(node => {
-      const zoneName = node.zone || 'N/A';
+    nodes.forEach((node) => {
+      const zoneName = node.zone || "N/A";
       const zoneNodes = zoneMap.get(zoneName) || [];
       zoneNodes.push(node);
       zoneMap.set(zoneName, zoneNodes);
@@ -189,8 +195,8 @@ export class ZoneManager {
       .map(([zoneName, nodes]) => ({ zoneName, nodes }))
       .sort((a, b) => {
         // Sort N/A last
-        if (a.zoneName === 'N/A') return 1;
-        if (b.zoneName === 'N/A') return -1;
+        if (a.zoneName === "N/A") return 1;
+        if (b.zoneName === "N/A") return -1;
         return a.zoneName.localeCompare(b.zoneName);
       });
   }
@@ -198,7 +204,10 @@ export class ZoneManager {
   /**
    * Calculates optimal grid dimensions for given item count and aspect ratio
    */
-  private calculateGridDimensions(count: number, aspectRatio: number): { cols: number; rows: number } {
+  private calculateGridDimensions(
+    count: number,
+    aspectRatio: number,
+  ): { cols: number; rows: number } {
     let cols = Math.ceil(Math.sqrt(count * aspectRatio));
     let rows = Math.ceil(count / cols);
 
@@ -215,7 +224,7 @@ export class ZoneManager {
   private calculateActualNodeSize(
     nodeCount: number,
     zoneWidth: number,
-    zoneHeight: number
+    zoneHeight: number,
   ): { nodeSize: number; spacingFactor: number } {
     const aspectRatio = zoneWidth / zoneHeight;
     const { cols, rows } = this.calculateGridDimensions(nodeCount, aspectRatio);
@@ -228,7 +237,7 @@ export class ZoneManager {
     if (nodeCount <= 10) {
       minNodeSize = 15;
       maxNodeSize = 40;
-      spacingFactor = 0.20;
+      spacingFactor = 0.2;
     } else if (nodeCount <= 50) {
       minNodeSize = 8;
       maxNodeSize = 25;
@@ -236,7 +245,7 @@ export class ZoneManager {
     } else if (nodeCount <= 200) {
       minNodeSize = 4;
       maxNodeSize = 15;
-      spacingFactor = 0.10;
+      spacingFactor = 0.1;
     } else {
       minNodeSize = 2;
       maxNodeSize = 8;
@@ -261,7 +270,7 @@ export class ZoneManager {
   private calculateZoneSizes(
     zoneGroups: { zoneName: string; nodes: KubernetesNode[] }[],
     zoneCols: number,
-    zoneRows: number
+    zoneRows: number,
   ): { width: number; height: number }[] {
     const interZoneSpacing = 10; // Spacing between zones
     const margin = 2; // Margin inside each zone
@@ -277,7 +286,7 @@ export class ZoneManager {
     const initialSize = Math.min(avgZoneWidth, avgZoneHeight);
 
     // Calculate required sizes using iterative refinement
-    const zoneSizes = zoneGroups.map(group => {
+    const zoneSizes = zoneGroups.map((group) => {
       const nodeCount = group.nodes.length;
 
       // Start with initial estimate
@@ -289,7 +298,7 @@ export class ZoneManager {
         const { nodeSize, spacingFactor } = this.calculateActualNodeSize(
           nodeCount,
           zoneSize,
-          zoneSize
+          zoneSize,
         );
 
         // Calculate grid dimensions
@@ -312,12 +321,12 @@ export class ZoneManager {
       return {
         width: zoneSize,
         height: zoneSize,
-        nodeCount
+        nodeCount,
       };
     });
 
     // Check if zones fit in available space
-    const maxZoneSize = Math.max(...zoneSizes.map(z => z.width));
+    const maxZoneSize = Math.max(...zoneSizes.map((z) => z.width));
     const totalWidth = zoneCols * maxZoneSize + (zoneCols - 1) * interZoneSpacing;
     const totalHeight = zoneRows * maxZoneSize + (zoneRows - 1) * interZoneSpacing;
 
@@ -329,21 +338,21 @@ export class ZoneManager {
       scale = Math.min(widthScale, heightScale);
     }
 
-    console.log('[ZoneManager] Zone sizing:', {
+    console.log("[ZoneManager] Zone sizing:", {
       zoneSizes,
       maxZoneSize,
       totalWidth,
       totalHeight,
       scale,
-      viewport: this.viewport
+      viewport: this.viewport,
     });
 
     // Apply final scaling and return square zones
-    return zoneSizes.map(size => {
+    return zoneSizes.map((size) => {
       const finalSize = size.width * scale;
       return {
         width: finalSize,
-        height: finalSize
+        height: finalSize,
       };
     });
   }
@@ -354,7 +363,7 @@ export class ZoneManager {
   private calculateNodeLayoutInZone(
     nodes: KubernetesNode[],
     zoneWidth: number,
-    zoneHeight: number
+    zoneHeight: number,
   ): { nodePositions: THREE.Vector3[]; nodeScale: number } {
     const nodeCount = nodes.length;
     const aspectRatio = zoneWidth / zoneHeight;
@@ -373,7 +382,7 @@ export class ZoneManager {
     if (nodeCount <= 10) {
       minNodeSize = 15;
       maxNodeSize = 40;
-      spacingFactor = 0.20;
+      spacingFactor = 0.2;
     } else if (nodeCount <= 50) {
       minNodeSize = 8;
       maxNodeSize = 25;
@@ -381,7 +390,7 @@ export class ZoneManager {
     } else if (nodeCount <= 200) {
       minNodeSize = 4;
       maxNodeSize = 15;
-      spacingFactor = 0.10;
+      spacingFactor = 0.1;
     } else {
       minNodeSize = 2;
       maxNodeSize = 8;
@@ -422,24 +431,24 @@ export class ZoneManager {
    * Gets information about a zone for tooltips
    */
   public getZoneInfo(zoneName: string, nodes: KubernetesNode[]): ZoneInfo {
-    const readyNodes = nodes.filter(n => n.status === 'Ready').length;
+    const readyNodes = nodes.filter((n) => n.status === "Ready").length;
 
     // Calculate total resources
     const totalCpu = nodes.reduce((sum, node) => {
-      const cpu = parseInt(node.capacity.cpu) || 0;
+      const cpu = parseInt(node.capacity.cpu ?? "0") || 0;
       return sum + cpu;
     }, 0);
 
     const totalMemory = nodes.reduce((sum, node) => {
       const memStr = node.capacity.memory;
       const match = memStr.match(/(\d+)([A-Za-z]+)/);
-      if (match) {
+      if (match && match[1] && match[2]) {
         const value = parseInt(match[1]);
         const unit = match[2];
         // Convert to Gi for display
-        if (unit === 'Ki') return sum + value / (1024 * 1024);
-        if (unit === 'Mi') return sum + value / 1024;
-        if (unit === 'Gi') return sum + value;
+        if (unit === "Ki") return sum + value / (1024 * 1024);
+        if (unit === "Mi") return sum + value / 1024;
+        if (unit === "Gi") return sum + value;
       }
       return sum;
     }, 0);
@@ -449,7 +458,7 @@ export class ZoneManager {
       nodeCount: nodes.length,
       readyNodes,
       totalCpu: `${totalCpu} cores`,
-      totalMemory: `${Math.round(totalMemory)} Gi`
+      totalMemory: `${Math.round(totalMemory)} Gi`,
     };
   }
 
@@ -466,8 +475,7 @@ export class ZoneManager {
       const minZ = zone.position.z - halfHeight;
       const maxZ = zone.position.z + halfHeight;
 
-      if (position.x >= minX && position.x <= maxX &&
-          position.z >= minZ && position.z <= maxZ) {
+      if (position.x >= minX && position.x <= maxX && position.z >= minZ && position.z <= maxZ) {
         return zone;
       }
     }

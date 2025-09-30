@@ -35,6 +35,21 @@ jobs:
           # Basic smoke test - ensure container can start
           docker run --rm test-${{ matrix.service }}:${{ github.sha }} echo "Container started successfully"
 
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: test-${{ matrix.service }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+          category: 'container-${{ matrix.service }}'
+
   lint-helm:
     runs-on: ubuntu-latest
     steps:
@@ -67,3 +82,32 @@ jobs:
             # Basic YAML validation
             python3 -c "import yaml; yaml.safe_load(open('$workflow'))"
           done
+
+  security-scanning:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [backend, frontend]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./${{ matrix.service }}
+        run: npm ci
+
+      - name: Run security linting
+        working-directory: ./${{ matrix.service }}
+        run: npm run lint:security
+
+      - name: Run dependency audit
+        working-directory: ./${{ matrix.service }}
+        run: npm audit --audit-level=high

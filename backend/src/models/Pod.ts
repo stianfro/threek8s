@@ -1,4 +1,4 @@
-import { Vector3, ContainerInfo, PodPhase } from './ValueObjects';
+import { Vector3, ContainerInfo, PodPhase } from "./ValueObjects";
 
 export interface Pod {
   name: string;
@@ -61,15 +61,15 @@ export class PodModel implements Pod {
   }
 
   isRunning(): boolean {
-    return this.phase === 'Running';
+    return this.phase === "Running";
   }
 
   isPending(): boolean {
-    return this.phase === 'Pending';
+    return this.phase === "Pending";
   }
 
   isFailed(): boolean {
-    return this.phase === 'Failed';
+    return this.phase === "Failed";
   }
 
   isTerminating(): boolean {
@@ -77,7 +77,7 @@ export class PodModel implements Pod {
   }
 
   getAllContainersReady(): boolean {
-    return this.containers.every(container => container.ready);
+    return this.containers.every((container) => container.ready);
   }
 
   getContainerCount(): number {
@@ -85,21 +85,21 @@ export class PodModel implements Pod {
   }
 
   getReadyContainerCount(): number {
-    return this.containers.filter(c => c.ready).length;
+    return this.containers.filter((c) => c.ready).length;
   }
 
   getStatusColor(): string {
     switch (this.phase) {
-      case 'Running':
-        return this.getAllContainersReady() ? '#4CAF50' : '#FFC107'; // Green or Yellow
-      case 'Pending':
-        return '#FF9800'; // Orange
-      case 'Failed':
-        return '#F44336'; // Red
-      case 'Succeeded':
-        return '#2196F3'; // Blue
+      case "Running":
+        return this.getAllContainersReady() ? "#4CAF50" : "#FFC107"; // Green or Yellow
+      case "Pending":
+        return "#FF9800"; // Orange
+      case "Failed":
+        return "#F44336"; // Red
+      case "Succeeded":
+        return "#2196F3"; // Blue
       default:
-        return '#9E9E9E'; // Gray
+        return "#9E9E9E"; // Gray
     }
   }
 }

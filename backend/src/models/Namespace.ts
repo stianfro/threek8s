@@ -1,4 +1,4 @@
-import { NamespaceStatus } from './ValueObjects';
+import { NamespaceStatus } from "./ValueObjects";
 
 export interface Namespace {
   name: string;
@@ -30,15 +30,15 @@ export class NamespaceModel implements Namespace {
   }
 
   isActive(): boolean {
-    return this.status === 'Active';
+    return this.status === "Active";
   }
 
   isTerminating(): boolean {
-    return this.status === 'Terminating';
+    return this.status === "Terminating";
   }
 
   isSystemNamespace(): boolean {
-    const systemNamespaces = ['kube-system', 'kube-public', 'kube-node-lease'];
+    const systemNamespaces = ["kube-system", "kube-public", "kube-node-lease"];
     return systemNamespaces.includes(this.name);
   }
 

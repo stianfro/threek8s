@@ -1,8 +1,8 @@
 export interface KubernetesNode {
   name: string;
   uid: string;
-  status: 'Ready' | 'NotReady' | 'Unknown';
-  role: 'master' | 'worker' | 'control-plane';
+  status: "Ready" | "NotReady" | "Unknown";
+  role: "master" | "worker" | "control-plane";
   capacity: {
     cpu: string;
     memory: string;
@@ -37,7 +37,7 @@ export interface Pod {
   namespace: string;
   nodeName: string;
   status: PodStatus;
-  phase: 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown';
+  phase: "Pending" | "Running" | "Succeeded" | "Failed" | "Unknown";
   conditions: {
     type: string;
     status: string;
@@ -48,14 +48,14 @@ export interface Pod {
     image: string;
     ready: boolean;
     restartCount: number;
-    state: 'waiting' | 'running' | 'terminated';
+    state: "waiting" | "running" | "terminated";
     stateDetails?: string;
   }[];
   labels: Record<string, string>;
   annotations: Record<string, string>;
   creationTimestamp: string;
   ip?: string;
-  qosClass?: 'Guaranteed' | 'Burstable' | 'BestEffort';
+  qosClass?: "Guaranteed" | "Burstable" | "BestEffort";
   resources?: {
     limits?: {
       cpu?: string;
@@ -69,22 +69,22 @@ export interface Pod {
 }
 
 export type PodStatus =
-  | 'Running'
-  | 'Pending'
-  | 'Succeeded'
-  | 'Failed'
-  | 'Unknown'
-  | 'Terminating'
-  | 'ContainerCreating'
-  | 'CrashLoopBackOff'
-  | 'ImagePullBackOff'
-  | 'ErrImagePull'
-  | 'CreateContainerError';
+  | "Running"
+  | "Pending"
+  | "Succeeded"
+  | "Failed"
+  | "Unknown"
+  | "Terminating"
+  | "ContainerCreating"
+  | "CrashLoopBackOff"
+  | "ImagePullBackOff"
+  | "ErrImagePull"
+  | "CreateContainerError";
 
 export interface Namespace {
   name: string;
   uid: string;
-  status: 'Active' | 'Terminating';
+  status: "Active" | "Terminating";
   labels: Record<string, string>;
   annotations: Record<string, string>;
   creationTimestamp: string;
@@ -115,12 +115,21 @@ export interface ClusterState {
 }
 
 export interface WatchEvent<T> {
-  type: 'ADDED' | 'MODIFIED' | 'DELETED';
+  type: "ADDED" | "MODIFIED" | "DELETED";
   object: T;
 }
 
 export interface WebSocketMessage {
-  type: 'state' | 'event' | 'ping' | 'pong' | 'error' | 'node_event' | 'pod_event' | 'namespace_event' | 'metrics';
+  type:
+    | "state"
+    | "event"
+    | "ping"
+    | "pong"
+    | "error"
+    | "node_event"
+    | "pod_event"
+    | "namespace_event"
+    | "metrics";
   data?: any;
   action?: string;
   timestamp?: string;
@@ -135,7 +144,7 @@ export interface StateUpdate {
 }
 
 export interface EventMessage {
-  eventType: 'node' | 'pod' | 'namespace';
-  action: 'added' | 'modified' | 'deleted';
+  eventType: "node" | "pod" | "namespace";
+  action: "added" | "modified" | "deleted";
   resource: KubernetesNode | Pod | Namespace;
 }

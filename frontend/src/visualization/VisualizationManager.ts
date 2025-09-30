@@ -1,13 +1,13 @@
-import * as THREE from 'three';
-import { SceneManager } from '../scene/SceneManager';
-import { NodeObject } from './NodeObject';
-import { PodObject } from './PodObject';
-import { PodInstanceManager } from './PodInstanceManager';
-import { GeometryPool } from './GeometryPool';
-import { LODManager, DetailLevel } from './LODManager';
-import { ZoneManager } from './ZoneManager';
-import type { ZoneLayout } from './ZoneManager';
-import type { KubernetesNode, Pod, ClusterState } from '../types/kubernetes';
+import * as THREE from "three";
+import { SceneManager } from "../scene/SceneManager";
+import { NodeObject } from "./NodeObject";
+import { PodObject } from "./PodObject";
+import { PodInstanceManager } from "./PodInstanceManager";
+import { GeometryPool } from "./GeometryPool";
+import { LODManager, DetailLevel } from "./LODManager";
+import { ZoneManager } from "./ZoneManager";
+import type { ZoneLayout } from "./ZoneManager";
+import type { KubernetesNode, Pod, ClusterState } from "../types/kubernetes";
 
 export class VisualizationManager {
   private sceneManager: SceneManager;
@@ -38,26 +38,26 @@ export class VisualizationManager {
     this.lodManager = new LODManager(this.sceneManager.getCamera());
 
     this.nodeGroup = new THREE.Group();
-    this.nodeGroup.name = 'nodes';
+    this.nodeGroup.name = "nodes";
     this.sceneManager.addObject(this.nodeGroup);
 
     this.podGroup = new THREE.Group();
-    this.podGroup.name = 'pods';
+    this.podGroup.name = "pods";
     this.sceneManager.addObject(this.podGroup);
 
     this.zoneBordersGroup = new THREE.Group();
-    this.zoneBordersGroup.name = 'zoneBorders';
+    this.zoneBordersGroup.name = "zoneBorders";
     this.sceneManager.addObject(this.zoneBordersGroup);
 
     this.zoneLabelsGroup = new THREE.Group();
-    this.zoneLabelsGroup.name = 'zoneLabels';
+    this.zoneLabelsGroup.name = "zoneLabels";
     this.sceneManager.addObject(this.zoneLabelsGroup);
 
     // Initialize instanced rendering for pods if we have many of them
     this.checkAndInitializeInstancedRendering();
 
     // Add resize handler for dynamic viewport updates
-    window.addEventListener('resize', this.handleResize.bind(this));
+    window.addEventListener("resize", this.handleResize.bind(this));
   }
 
   private handleResize = (): void => {
@@ -77,7 +77,7 @@ export class VisualizationManager {
         this.initializeZoneManager();
       }
 
-      const nodesArray = Array.from(this.nodes.values()).map(n => n.getNode());
+      const nodesArray = Array.from(this.nodes.values()).map((n) => n.getNode());
       const layout = this.zoneManager!.calculateZoneLayout(nodesArray);
 
       // Check if the layout has changed significantly
@@ -95,7 +95,7 @@ export class VisualizationManager {
         this.referenceViewport = oldViewport;
       }
     }
-  }
+  };
 
   private hasLayoutChanged(newLayout: ZoneLayout): boolean {
     if (!this.lastLayout) return true;
@@ -108,7 +108,7 @@ export class VisualizationManager {
       const oldZone = this.lastLayout.zones[i];
       const newZone = newLayout.zones[i];
 
-      if (!oldZone) return true;
+      if (!oldZone || !newZone) return true;
 
       // Check zone position
       if (oldZone.position.distanceTo(newZone.position) > 0.1) return true;
@@ -125,9 +125,9 @@ export class VisualizationManager {
   }
 
   public updateState(state: ClusterState): void {
-    console.log('[VisualizationManager] Updating state:', {
+    console.log("[VisualizationManager] Updating state:", {
       nodes: state.nodes.length,
-      pods: state.pods.length
+      pods: state.pods.length,
     });
     this.updateNodes(state.nodes);
     this.updatePods(state.pods);
@@ -151,11 +151,13 @@ export class VisualizationManager {
     // Create a map of node UID to its position and scale in the zone layout
     const nodePositionMap = new Map<string, { position: THREE.Vector3; scale: number }>();
 
-    layout.zones.forEach(zone => {
+    layout.zones.forEach((zone) => {
       zone.nodes.forEach((nodeData, index) => {
+        const position = zone.nodePositions[index];
+        if (!position) return;
         nodePositionMap.set(nodeData.uid, {
-          position: zone.nodePositions[index],
-          scale: zone.nodeScale
+          position,
+          scale: zone.nodeScale,
         });
       });
     });
@@ -175,18 +177,18 @@ export class VisualizationManager {
 
   private createZoneLabel(zoneName: string, position: THREE.Vector3): THREE.Sprite {
     // Create canvas for text rendering
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d')!;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d")!;
     canvas.width = 256;
     canvas.height = 64;
 
     // No background fill - transparent background
 
     // Style and draw text
-    context.font = 'bold 28px Arial, sans-serif';
-    context.fillStyle = 'white';
-    context.textAlign = 'left';
-    context.textBaseline = 'top';
+    context.font = "bold 28px Arial, sans-serif";
+    context.fillStyle = "white";
+    context.textAlign = "left";
+    context.textBaseline = "top";
     context.fillText(zoneName, 12, 14);
 
     // Create texture and sprite
@@ -196,7 +198,7 @@ export class VisualizationManager {
     const material = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
-      depthTest: false // Render on top
+      depthTest: false, // Render on top
     });
 
     const sprite = new THREE.Sprite(material);
@@ -218,7 +220,7 @@ export class VisualizationManager {
     this.zoneLabelsGroup.clear();
 
     // Create border and label for each zone
-    layout.zones.forEach(zone => {
+    layout.zones.forEach((zone) => {
       const halfWidth = zone.size.width / 2;
       const halfHeight = zone.size.height / 2;
 
@@ -236,7 +238,7 @@ export class VisualizationManager {
         color: 0x808080, // Gray color
         linewidth: 1,
         transparent: true,
-        opacity: 0.5
+        opacity: 0.5,
       });
 
       const border = new THREE.Line(geometry, material);
@@ -252,7 +254,7 @@ export class VisualizationManager {
       const labelPosition = new THREE.Vector3(
         zone.position.x - halfWidth + labelOffsetX,
         0.5, // Slightly above ground
-        zone.position.z - halfHeight - labelOffsetZ // Negative to position ABOVE the zone
+        zone.position.z - halfHeight - labelOffsetZ, // Negative to position ABOVE the zone
       );
 
       const label = this.createZoneLabel(zone.zoneName, labelPosition);
@@ -261,7 +263,7 @@ export class VisualizationManager {
   }
 
   private updateNodes(nodes: KubernetesNode[]): void {
-    const currentNodeIds = new Set(nodes.map(n => n.uid));
+    const currentNodeIds = new Set(nodes.map((n) => n.uid));
 
     // Track if this is initial setup
     const isInitialSetup = this.nodes.size === 0;
@@ -278,7 +280,7 @@ export class VisualizationManager {
     let layout = this.lastLayout;
     if (!layout || isInitialSetup || (nodeCountChanged && !this.layoutLocked)) {
       if (!this.zoneManager) {
-        console.error('[VisualizationManager] ZoneManager not initialized');
+        console.error("[VisualizationManager] ZoneManager not initialized");
         return;
       }
       layout = this.zoneManager.calculateZoneLayout(nodes);
@@ -295,11 +297,13 @@ export class VisualizationManager {
 
     // Create a map of node UID to its position and scale in the zone layout
     const nodePositionMap = new Map<string, { position: THREE.Vector3; scale: number }>();
-    layout.zones.forEach(zone => {
+    layout.zones.forEach((zone) => {
       zone.nodes.forEach((nodeData, index) => {
+        const position = zone.nodePositions[index];
+        if (!position) return;
         nodePositionMap.set(nodeData.uid, {
-          position: zone.nodePositions[index],
-          scale: zone.nodeScale
+          position,
+          scale: zone.nodeScale,
         });
       });
     });
@@ -309,12 +313,12 @@ export class VisualizationManager {
       const layoutInfo = nodePositionMap.get(nodeData.uid);
 
       if (!layoutInfo) {
-        console.error('[VisualizationManager] No layout info for node:', nodeData.name);
+        console.error("[VisualizationManager] No layout info for node:", nodeData.name);
         return;
       }
 
       if (!node) {
-        console.log('[VisualizationManager] Creating new node:', nodeData.name);
+        console.log("[VisualizationManager] Creating new node:", nodeData.name);
         node = new NodeObject(nodeData, this.geometryPool);
         this.nodes.set(nodeData.uid, node);
         this.nodesByName.set(nodeData.name, node);
@@ -373,11 +377,11 @@ export class VisualizationManager {
     // Enable instanced rendering for large clusters
     const podCount = this.pods.size;
     if (podCount > 100 && !this.podInstanceManager && this.useInstancedRendering) {
-      console.log('[VisualizationManager] Initializing instanced rendering for', podCount, 'pods');
+      console.log("[VisualizationManager] Initializing instanced rendering for", podCount, "pods");
       this.podInstanceManager = new PodInstanceManager(this.podGroup);
 
       // Migrate existing pods to instanced rendering
-      this.pods.forEach(pod => {
+      this.pods.forEach((pod) => {
         this.podGroup.remove(pod);
         pod.dispose();
       });
@@ -398,18 +402,23 @@ export class VisualizationManager {
     }
 
     // Original individual pod rendering for small clusters
-    const currentPodIds = new Set(pods.map(p => p.uid));
+    const currentPodIds = new Set(pods.map((p) => p.uid));
     const podsByNode = new Map<string, Pod[]>();
 
-    console.log('[VisualizationManager] Updating pods. Current:', this.pods.size, 'New:', pods.length);
+    console.log(
+      "[VisualizationManager] Updating pods. Current:",
+      this.pods.size,
+      "New:",
+      pods.length,
+    );
 
-    pods.forEach(pod => {
+    pods.forEach((pod) => {
       const nodePods = podsByNode.get(pod.nodeName) || [];
       nodePods.push(pod);
       podsByNode.set(pod.nodeName, nodePods);
     });
 
-    pods.forEach(podData => {
+    pods.forEach((podData) => {
       let pod = this.pods.get(podData.uid);
 
       if (!pod) {
@@ -418,7 +427,7 @@ export class VisualizationManager {
         let initialSize = 0.8;
         if (node) {
           const nodePods = podsByNode.get(podData.nodeName) || [];
-          const podIndex = nodePods.findIndex(p => p.uid === podData.uid);
+          const podIndex = nodePods.findIndex((p) => p.uid === podData.uid);
           // Use world space method to get proper positions
           const slotInfo = node.getPodSlotInfoWorldSpace(podIndex, nodePods.length);
           initialSize = slotInfo.size;
@@ -434,7 +443,7 @@ export class VisualizationManager {
       const node = this.nodesByName.get(podData.nodeName);
       if (node) {
         const nodePods = podsByNode.get(podData.nodeName) || [];
-        const podIndex = nodePods.findIndex(p => p.uid === podData.uid);
+        const podIndex = nodePods.findIndex((p) => p.uid === podData.uid);
         // Use world space method - position is already in world coordinates
         const slotInfo = node.getPodSlotInfoWorldSpace(podIndex, nodePods.length);
         pod.setTargetPosition(slotInfo.position);
@@ -451,7 +460,7 @@ export class VisualizationManager {
     });
 
     // Delete marked pods
-    toDelete.forEach(uid => {
+    toDelete.forEach((uid) => {
       const pod = this.pods.get(uid);
       if (pod) {
         pod.animateDeletion();
@@ -468,28 +477,26 @@ export class VisualizationManager {
     if (!this.podInstanceManager) return;
 
     const podsByNode = new Map<string, Pod[]>();
-    pods.forEach(pod => {
+    pods.forEach((pod) => {
       const nodePods = podsByNode.get(pod.nodeName) || [];
       nodePods.push(pod);
       podsByNode.set(pod.nodeName, nodePods);
     });
 
     // Prepare position calculator
-    const getPositionForPod = (pod: Pod): { position: THREE.Vector3, size: number } => {
+    const getPositionForPod = (pod: Pod): { position: THREE.Vector3; size: number } => {
       const node = this.nodesByName.get(pod.nodeName);
       if (!node) {
         return { position: new THREE.Vector3(), size: 0.8 };
       }
 
       const nodePods = podsByNode.get(pod.nodeName) || [];
-      const podIndex = nodePods.findIndex(p => p.uid === pod.uid);
+      const podIndex = nodePods.findIndex((p) => p.uid === pod.uid);
       return node.getPodSlotInfoWorldSpace(podIndex, nodePods.length);
     };
 
     this.podInstanceManager.updatePods(pods, getPositionForPod);
   }
-
-
 
   private animateNodeScale(node: NodeObject, targetScale: number): void {
     // Skip animation if scale is already very close
@@ -527,7 +534,7 @@ export class VisualizationManager {
   private updatePodsForNode(node: NodeObject): void {
     // Get all pods for this node
     const podsForNode: Pod[] = [];
-    this.pods.forEach(pod => {
+    this.pods.forEach((pod) => {
       if (pod.getPod().nodeName === node.getNode().name) {
         podsForNode.push(pod.getPod());
       }
@@ -551,7 +558,7 @@ export class VisualizationManager {
 
     // Calculate bounding box of all nodes
     const box = new THREE.Box3();
-    nodeArray.forEach(node => {
+    nodeArray.forEach((node) => {
       box.expandByObject(node);
     });
 
@@ -565,7 +572,6 @@ export class VisualizationManager {
     // Adjust multiplier to ensure nodes fill 80-90% of viewport
     // Using 0.65 for ~85% viewport fill
     const optimalDistance = (maxDimension * 0.65) / (2 * Math.tan(fov / 2));
-
 
     // For initial zoom, use the calculated optimal distance directly
     let targetHeight = optimalDistance;
@@ -595,7 +601,6 @@ export class VisualizationManager {
     const camera = this.sceneManager.getCamera();
     const currentHeight = camera.position.y;
 
-
     // Force adjustment on initial load, or adjust if significantly different
     if (!this.initialZoomApplied || Math.abs(currentHeight - targetHeight) > 2) {
       camera.position.set(center.x, targetHeight, center.z + 0.001);
@@ -609,7 +614,6 @@ export class VisualizationManager {
       if (!this.initialZoomApplied) {
         this.initialZoomApplied = true;
       }
-    } else {
     }
   }
 
@@ -716,7 +720,7 @@ export class VisualizationManager {
 
     // Animate only visible nodes
     const animationSpeed = this.lodManager.getAnimationSpeedMultiplier();
-    this.nodes.forEach(node => {
+    this.nodes.forEach((node) => {
       if (this.isInFrustum(node) && this.lodManager.shouldRenderNodeDetails()) {
         node.animate(deltaTime * animationSpeed);
       }
@@ -728,7 +732,7 @@ export class VisualizationManager {
         this.podInstanceManager.animate(deltaTime * animationSpeed);
       } else {
         // Animate only visible pods
-        this.pods.forEach(pod => {
+        this.pods.forEach((pod) => {
           if (this.isInFrustum(pod)) {
             pod.animate(deltaTime * animationSpeed);
           }
@@ -737,7 +741,8 @@ export class VisualizationManager {
     }
 
     // Log performance stats in dev mode
-    if (import.meta.env.DEV && Math.random() < 0.01) { // Log occasionally
+    if (import.meta.env.DEV && Math.random() < 0.01) {
+      // Log occasionally
       this.logPerformanceStats();
     }
   }
@@ -746,7 +751,7 @@ export class VisualizationManager {
     const center = new THREE.Vector3();
     if (this.nodes.size === 0) return center;
 
-    this.nodes.forEach(node => {
+    this.nodes.forEach((node) => {
       center.add(node.position);
     });
     center.divideScalar(this.nodes.size);
@@ -760,8 +765,8 @@ export class VisualizationManager {
 
     // Adjust node opacity based on LOD
     const nodeOpacity = this.lodManager.getNodeOpacity();
-    this.nodes.forEach(node => {
-      const mesh = node.children.find(child => child instanceof THREE.Mesh) as THREE.Mesh;
+    this.nodes.forEach((node) => {
+      const mesh = node.children.find((child) => child instanceof THREE.Mesh) as THREE.Mesh;
       if (mesh && mesh.material instanceof THREE.MeshPhongMaterial) {
         mesh.material.opacity = nodeOpacity;
       }
@@ -770,8 +775,8 @@ export class VisualizationManager {
     // Adjust pod opacity if visible
     if (shouldRenderPods && !this.podInstanceManager) {
       const podOpacity = this.lodManager.getPodOpacity();
-      this.pods.forEach(pod => {
-        const mesh = pod.children.find(child => child instanceof THREE.Mesh) as THREE.Mesh;
+      this.pods.forEach((pod) => {
+        const mesh = pod.children.find((child) => child instanceof THREE.Mesh) as THREE.Mesh;
         if (mesh && mesh.material instanceof THREE.MeshPhongMaterial) {
           mesh.material.opacity = podOpacity;
         }
@@ -791,16 +796,16 @@ export class VisualizationManager {
     const poolStats = this.geometryPool.getStats();
     const instanceStats = this.podInstanceManager?.getStats();
 
-    console.log('[Performance Stats]', {
+    console.log("[Performance Stats]", {
       nodes: this.nodes.size,
       pods: this.podInstanceManager ? this.podInstanceManager.getPodCount() : this.pods.size,
       geometryPool: poolStats,
-      instancedRendering: instanceStats || 'disabled',
-      renderer: this.sceneManager.getScene().children.length + ' scene objects',
+      instancedRendering: instanceStats || "disabled",
+      renderer: this.sceneManager.getScene().children.length + " scene objects",
       lod: {
         level: this.lodManager.getCurrentLevel(),
-        distance: this.lodManager.getCameraDistance().toFixed(1)
-      }
+        distance: this.lodManager.getCameraDistance().toFixed(1),
+      },
     });
   }
 
@@ -828,7 +833,7 @@ export class VisualizationManager {
     // Check regular pods (non-instanced) and nodes
     const allObjects: THREE.Object3D[] = [
       ...Array.from(this.nodes.values()),
-      ...Array.from(this.pods.values())
+      ...Array.from(this.pods.values()),
     ];
 
     const intersects = raycaster.intersectObjects(allObjects, true);
@@ -893,12 +898,18 @@ export class VisualizationManager {
 
     // Pods have priority over nodes
     if (podIntersections.length > 0) {
-      return this.findParentObject(podIntersections[0].object);
+      const firstPod = podIntersections[0];
+      if (firstPod) {
+        return this.findParentObject(firstPod.object);
+      }
     }
 
     // If no pods, return closest node
     if (nodeIntersections.length > 0) {
-      return this.findParentObject(nodeIntersections[0].object);
+      const firstNode = nodeIntersections[0];
+      if (firstNode) {
+        return this.findParentObject(firstNode.object);
+      }
     }
 
     return null;
@@ -916,10 +927,10 @@ export class VisualizationManager {
   }
 
   private showTooltip(object: NodeObject | PodObject, x: number, y: number): void {
-    const tooltip = document.getElementById('tooltip');
+    const tooltip = document.getElementById("tooltip");
     if (!tooltip) return;
 
-    let content = '';
+    let content = "";
 
     if (object instanceof NodeObject) {
       const node = object.getNode();
@@ -950,9 +961,7 @@ export class VisualizationManager {
       `;
     } else if (object instanceof PodObject) {
       const pod = object.getPod();
-      const containerInfo = pod.containers
-        .map(c => `${c.name} (${c.state})`)
-        .join(', ');
+      const containerInfo = pod.containers.map((c) => `${c.name} (${c.state})`).join(", ");
       content = `
         <div class="tooltip-title">Pod: ${pod.name}</div>
         <div class="tooltip-content">
@@ -972,28 +981,30 @@ export class VisualizationManager {
             <span class="tooltip-label">Containers:</span>
             <span class="tooltip-value">${containerInfo}</span>
           </div>
-          ${pod.ip ? `
+          ${
+            pod.ip
+              ? `
           <div class="tooltip-row">
             <span class="tooltip-label">IP:</span>
             <span class="tooltip-value">${pod.ip}</span>
-          </div>` : ''}
+          </div>`
+              : ""
+          }
         </div>
       `;
     }
 
     tooltip.innerHTML = content;
-    tooltip.style.display = 'block';
+    tooltip.style.display = "block";
     tooltip.style.left = `${x + 10}px`;
     tooltip.style.top = `${y + 10}px`;
   }
 
   private showTooltipForPod(pod: Pod, x: number, y: number): void {
-    const tooltip = document.getElementById('tooltip');
+    const tooltip = document.getElementById("tooltip");
     if (!tooltip) return;
 
-    const containerInfo = pod.containers
-      .map(c => `${c.name} (${c.state})`)
-      .join(', ');
+    const containerInfo = pod.containers.map((c) => `${c.name} (${c.state})`).join(", ");
 
     const content = `
       <div class="tooltip-title">Pod: ${pod.name}</div>
@@ -1014,22 +1025,26 @@ export class VisualizationManager {
           <span class="tooltip-label">Containers:</span>
           <span class="tooltip-value">${containerInfo}</span>
         </div>
-        ${pod.ip ? `
+        ${
+          pod.ip
+            ? `
         <div class="tooltip-row">
           <span class="tooltip-label">IP:</span>
           <span class="tooltip-value">${pod.ip}</span>
-        </div>` : ''}
+        </div>`
+            : ""
+        }
       </div>
     `;
 
     tooltip.innerHTML = content;
-    tooltip.style.display = 'block';
+    tooltip.style.display = "block";
     tooltip.style.left = `${x + 10}px`;
     tooltip.style.top = `${y + 10}px`;
   }
 
   private showZoneTooltip(zoneName: string, nodes: KubernetesNode[], x: number, y: number): void {
-    const tooltip = document.getElementById('tooltip');
+    const tooltip = document.getElementById("tooltip");
     if (!tooltip) return;
 
     if (!this.zoneManager) return;
@@ -1055,23 +1070,23 @@ export class VisualizationManager {
     `;
 
     tooltip.innerHTML = content;
-    tooltip.style.display = 'block';
+    tooltip.style.display = "block";
     tooltip.style.left = `${x + 10}px`;
     tooltip.style.top = `${y + 10}px`;
   }
 
   private hideTooltip(): void {
-    const tooltip = document.getElementById('tooltip');
+    const tooltip = document.getElementById("tooltip");
     if (tooltip) {
-      tooltip.style.display = 'none';
+      tooltip.style.display = "none";
     }
   }
 
   public dispose(): void {
     // Remove event listeners
-    window.removeEventListener('resize', this.handleResize.bind(this));
+    window.removeEventListener("resize", this.handleResize.bind(this));
 
-    this.nodes.forEach(node => {
+    this.nodes.forEach((node) => {
       this.nodeGroup.remove(node);
       node.dispose();
     });
@@ -1082,7 +1097,7 @@ export class VisualizationManager {
       this.podInstanceManager.dispose();
       this.podInstanceManager = null;
     } else {
-      this.pods.forEach(pod => {
+      this.pods.forEach((pod) => {
         this.podGroup.remove(pod);
         pod.dispose();
       });
@@ -1091,7 +1106,7 @@ export class VisualizationManager {
 
     // Clear zone borders and labels
     // Dispose label sprites and textures
-    this.zoneLabelsGroup.children.forEach(child => {
+    this.zoneLabelsGroup.children.forEach((child) => {
       if (child instanceof THREE.Sprite) {
         if (child.material.map) {
           child.material.map.dispose();

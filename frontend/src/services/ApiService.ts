@@ -1,9 +1,15 @@
-import type { ClusterInfo, ClusterState, KubernetesNode, Pod, Namespace } from '../types/kubernetes';
+import type {
+  ClusterInfo,
+  ClusterState,
+  KubernetesNode,
+  Pod,
+  Namespace,
+} from "../types/kubernetes";
 
 export class ApiService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:3001/api') {
+  constructor(baseUrl: string = "http://localhost:3001/api") {
     this.baseUrl = baseUrl;
   }
 
@@ -14,7 +20,7 @@ export class ApiService {
       const response = await fetch(url, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...options?.headers,
         },
       });
@@ -36,19 +42,19 @@ export class ApiService {
     kubernetes: { connected: boolean; clusterName?: string };
     timestamp: string;
   }> {
-    return this.fetch('/health');
+    return this.fetch("/health");
   }
 
   public async getClusterInfo(): Promise<ClusterInfo> {
-    return this.fetch('/cluster/info');
+    return this.fetch("/cluster/info");
   }
 
   public async getClusterState(): Promise<ClusterState> {
-    return this.fetch('/cluster/state');
+    return this.fetch("/cluster/state");
   }
 
   public async getNodes(): Promise<KubernetesNode[]> {
-    return this.fetch('/nodes');
+    return this.fetch("/nodes");
   }
 
   public async getNode(name: string): Promise<KubernetesNode> {
@@ -56,7 +62,7 @@ export class ApiService {
   }
 
   public async getPods(namespace?: string): Promise<Pod[]> {
-    const query = namespace ? `?namespace=${namespace}` : '';
+    const query = namespace ? `?namespace=${namespace}` : "";
     return this.fetch(`/pods${query}`);
   }
 
@@ -65,7 +71,7 @@ export class ApiService {
   }
 
   public async getNamespaces(): Promise<Namespace[]> {
-    return this.fetch('/namespaces');
+    return this.fetch("/namespaces");
   }
 
   public async getNamespace(name: string): Promise<Namespace> {
@@ -78,6 +84,6 @@ export class ApiService {
     namespaces: number;
     timestamp: string;
   }> {
-    return this.fetch('/cluster/metrics');
+    return this.fetch("/cluster/metrics");
   }
 }

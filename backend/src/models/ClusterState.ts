@@ -1,7 +1,7 @@
-import { KubernetesNode } from './KubernetesNode';
-import { Pod } from './Pod';
-import { Namespace } from './Namespace';
-import { ConnectionStatus, ClusterMetrics } from './ValueObjects';
+import { KubernetesNode } from "./KubernetesNode";
+import { Pod } from "./Pod";
+import { Namespace } from "./Namespace";
+import { ConnectionStatus, ClusterMetrics } from "./ValueObjects";
 
 export interface ClusterState {
   nodes: Map<string, KubernetesNode>;
@@ -38,7 +38,7 @@ export class ClusterStateModel implements ClusterState {
     this.nodes = new Map();
     this.pods = new Map();
     this.namespaces = new Map();
-    this.connectionStatus = 'Disconnected';
+    this.connectionStatus = "Disconnected";
     this.lastUpdated = new Date();
     this.metrics = this.calculateMetrics();
 
@@ -63,7 +63,7 @@ export class ClusterStateModel implements ClusterState {
     this.nodes.delete(nodeName);
     // Remove pods from this node
     const podIds = this.podsByNode.get(nodeName) || new Set();
-    podIds.forEach(podId => this.deletePod(podId));
+    podIds.forEach((podId) => this.deletePod(podId));
     this.podsByNode.delete(nodeName);
     this.updateLastUpdated();
     this.recalculateMetrics();
@@ -140,14 +140,14 @@ export class ClusterStateModel implements ClusterState {
   getPodsByNode(nodeName: string): Pod[] {
     const podIds = this.podsByNode.get(nodeName) || new Set();
     return Array.from(podIds)
-      .map(id => this.pods.get(id))
+      .map((id) => this.pods.get(id))
       .filter((pod): pod is Pod => pod !== undefined);
   }
 
   getPodsByNamespace(namespace: string): Pod[] {
     const podIds = this.podsByNamespace.get(namespace) || new Set();
     return Array.from(podIds)
-      .map(id => this.pods.get(id))
+      .map((id) => this.pods.get(id))
       .filter((pod): pod is Pod => pod !== undefined);
   }
 
@@ -166,7 +166,7 @@ export class ClusterStateModel implements ClusterState {
     this.namespaces.delete(namespaceName);
     // Delete all pods in this namespace
     const podIds = this.podsByNamespace.get(namespaceName) || new Set();
-    podIds.forEach(podId => this.deletePod(podId));
+    podIds.forEach((podId) => this.deletePod(podId));
     this.podsByNamespace.delete(namespaceName);
     this.updateLastUpdated();
   }
@@ -183,7 +183,7 @@ export class ClusterStateModel implements ClusterState {
     this.namespaces.clear();
     this.podsByNode.clear();
     this.podsByNamespace.clear();
-    this.connectionStatus = 'Disconnected';
+    this.connectionStatus = "Disconnected";
     this.updateLastUpdated();
     this.recalculateMetrics();
   }
@@ -198,11 +198,11 @@ export class ClusterStateModel implements ClusterState {
 
     return {
       totalNodes: nodes.length,
-      readyNodes: nodes.filter(n => n.status === 'Ready').length,
+      readyNodes: nodes.filter((n) => n.status === "Ready").length,
       totalPods: pods.length,
-      runningPods: pods.filter(p => p.phase === 'Running').length,
-      pendingPods: pods.filter(p => p.phase === 'Pending').length,
-      failedPods: pods.filter(p => p.phase === 'Failed').length,
+      runningPods: pods.filter((p) => p.phase === "Running").length,
+      pendingPods: pods.filter((p) => p.phase === "Pending").length,
+      failedPods: pods.filter((p) => p.phase === "Failed").length,
     };
   }
 

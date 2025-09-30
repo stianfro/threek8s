@@ -1,25 +1,25 @@
-import dotenv from 'dotenv';
-import { createServer } from 'http';
-import { KubeConfig } from '@kubernetes/client-node';
-import { createApp } from './app';
-import { KubernetesService } from './services/KubernetesService';
-import { WatchManager } from './services/WatchManager';
-import { StateManager } from './services/StateManager';
-import { WebSocketManager } from './services/WebSocketManager';
-import { EventProcessor } from './services/EventProcessor';
+import dotenv from "dotenv";
+import { createServer } from "http";
+import { KubeConfig } from "@kubernetes/client-node";
+import { createApp } from "./app";
+import { KubernetesService } from "./services/KubernetesService";
+import { WatchManager } from "./services/WatchManager";
+import { StateManager } from "./services/StateManager";
+import { WebSocketManager } from "./services/WebSocketManager";
+import { EventProcessor } from "./services/EventProcessor";
 
 // Load environment variables
 dotenv.config();
 
 // Configuration
-const PORT = parseInt(process.env.PORT || '3001', 10);
+const PORT = parseInt(process.env.PORT || "3001", 10);
 const KUBECONFIG_PATH = process.env.KUBECONFIG_PATH;
-const WS_HEARTBEAT_INTERVAL = parseInt(process.env.WS_HEARTBEAT_INTERVAL || '30000', 10);
-const WS_HEARTBEAT_TIMEOUT = parseInt(process.env.WS_HEARTBEAT_TIMEOUT || '10000', 10);
+const WS_HEARTBEAT_INTERVAL = parseInt(process.env.WS_HEARTBEAT_INTERVAL || "30000", 10);
+const WS_HEARTBEAT_TIMEOUT = parseInt(process.env.WS_HEARTBEAT_TIMEOUT || "10000", 10);
 
 async function startServer() {
   try {
-    console.log('Starting ThreeK8s backend...');
+    console.log("Starting ThreeK8s backend...");
 
     // Initialize Kubernetes configuration
     const kubeConfig = new KubeConfig();
@@ -28,13 +28,13 @@ async function startServer() {
     const inCluster = process.env.KUBERNETES_SERVICE_HOST !== undefined;
 
     if (inCluster) {
-      console.log('Detected in-cluster environment, using service account');
+      console.log("Detected in-cluster environment, using service account");
       kubeConfig.loadFromCluster();
     } else if (KUBECONFIG_PATH) {
       console.log(`Loading kubeconfig from: ${KUBECONFIG_PATH}`);
-      kubeConfig.loadFromFile(KUBECONFIG_PATH.replace('~', process.env.HOME || ''));
+      kubeConfig.loadFromFile(KUBECONFIG_PATH.replace("~", process.env.HOME || ""));
     } else {
-      console.log('Loading kubeconfig from default location');
+      console.log("Loading kubeconfig from default location");
       kubeConfig.loadFromDefault();
     }
 
@@ -53,7 +53,7 @@ async function startServer() {
     const webSocketManager = new WebSocketManager(
       server,
       WS_HEARTBEAT_INTERVAL,
-      WS_HEARTBEAT_TIMEOUT
+      WS_HEARTBEAT_TIMEOUT,
     );
 
     // Initialize event processor
@@ -61,20 +61,20 @@ async function startServer() {
       kubernetesService,
       watchManager,
       stateManager,
-      webSocketManager
+      webSocketManager,
     );
 
     // Connect to Kubernetes cluster
-    console.log('Connecting to Kubernetes cluster...');
+    console.log("Connecting to Kubernetes cluster...");
     await kubernetesService.connect();
 
     const clusterInfo = await kubernetesService.getClusterInfo();
     console.log(`Connected to cluster: ${clusterInfo.name} (${clusterInfo.version})`);
-    stateManager.setConnectionStatus('Connected');
+    stateManager.setConnectionStatus("Connected");
     stateManager.setClusterInfo(clusterInfo);
 
     // Initialize event processor (loads initial state and starts watching)
-    console.log('Initializing event processor...');
+    console.log("Initializing event processor...");
     await eventProcessor.initialize();
 
     // Start HTTP server
@@ -85,11 +85,10 @@ async function startServer() {
     });
 
     // Graceful shutdown
-    process.on('SIGTERM', () => shutdown(server, eventProcessor, watchManager, webSocketManager));
-    process.on('SIGINT', () => shutdown(server, eventProcessor, watchManager, webSocketManager));
-
+    process.on("SIGTERM", () => shutdown(server, eventProcessor, watchManager, webSocketManager));
+    process.on("SIGINT", () => shutdown(server, eventProcessor, watchManager, webSocketManager));
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error("Failed to start server:", error);
     process.exit(1);
   }
 }
@@ -98,9 +97,9 @@ function shutdown(
   server: any,
   eventProcessor: EventProcessor,
   watchManager: WatchManager,
-  webSocketManager: WebSocketManager
+  webSocketManager: WebSocketManager,
 ) {
-  console.log('\nShutting down server...');
+  console.log("\nShutting down server...");
 
   // Stop processing events
   eventProcessor.stop();
@@ -113,19 +112,19 @@ function shutdown(
 
   // Close HTTP server
   server.close(() => {
-    console.log('Server shut down gracefully');
+    console.log("Server shut down gracefully");
     process.exit(0);
   });
 
   // Force exit after 10 seconds
   setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
+    console.error("Could not close connections in time, forcefully shutting down");
     process.exit(1);
   }, 10000);
 }
 
 // Start the server
-startServer().catch(error => {
-  console.error('Fatal error:', error);
+startServer().catch((error) => {
+  console.error("Fatal error:", error);
   process.exit(1);
 });
