@@ -1,4 +1,4 @@
-# ThreeK8s - 3D Kubernetes Cluster Visualization
+# three.k8s - 3D Kubernetes Cluster Visualization
 
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org)
@@ -10,7 +10,7 @@
 A real-time 3D visualization tool for Kubernetes clusters using Three.js.
 Watch your nodes and pods come to life in an interactive 3D space with smooth animations and live updates.
 
-<img width="3548" height="1956" alt="CleanShot 2025-09-25 at 11 45 28@2x" src="https://github.com/user-attachments/assets/220e89f2-1673-47c7-bdd0-5affbf3953f8" />
+<img width="4680" height="2632" alt="CleanShot 2025-09-30 at 14 39 13@2x" src="https://github.com/user-attachments/assets/21a0d926-563f-4c47-9ddd-c60f3d747db3" />
 
 ## ✨ Features
 
@@ -22,6 +22,8 @@ Watch your nodes and pods come to life in an interactive 3D space with smooth an
 - **Color-coded Status**: Visual indicators for different pod and node states
 - **Hover Information**: Detailed tooltips showing resource information
 - **Performance Optimized**: Handles clusters with 100+ nodes efficiently
+
+![CleanShot 2025-09-30 at 14 37 48](https://github.com/user-attachments/assets/77e63100-ebc6-48b4-9a47-b4c22f641f21)
 
 ## 🚀 Quick Start
 
