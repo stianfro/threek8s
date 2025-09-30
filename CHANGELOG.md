@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/stianfro/threek8s/compare/v1.2.3...v1.3.0) (2025-09-30)
+
+
+### Features
+
+* implement zone-based node grouping with visual labels ([#33](https://github.com/stianfro/threek8s/issues/33)) ([b1e375f](https://github.com/stianfro/threek8s/commit/b1e375febe3fe30d2189cca3d7923a02a7096fc4))
+
+
+### Documentation
+
+* update readme ([463c571](https://github.com/stianfro/threek8s/commit/463c5718101614e074a19cd0017b98235f055ba8))
+
 ## [1.2.3](https://github.com/stianfro/threek8s/compare/v1.2.2...v1.2.3) (2025-09-26)
 
 
