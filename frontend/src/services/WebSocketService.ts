@@ -119,12 +119,11 @@ export class WebSocketService {
       case "pod_event":
         if (this.onEventCallback) {
           // Convert backend action format (ADDED, MODIFIED, DELETED) to frontend format
-          const action = message.action
-            ?.toLowerCase() as any;
+          const action = (message.action?.toLowerCase() as any) || "modified";
           console.log("[WebSocket] Pod event:", action, message.data);
           const podEvent: EventMessage = {
             eventType: "pod",
-            action: action || "modified",
+            action: action,
             resource: message.data,
           };
           this.onEventCallback(podEvent);
