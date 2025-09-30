@@ -5,6 +5,7 @@ import { Namespace } from "../models/Namespace";
 import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 
 export class KubernetesService extends EventEmitter {
   private kubeConfig: KubeConfig;
@@ -31,7 +32,9 @@ export class KubernetesService extends EventEmitter {
       console.log("KubernetesService: Loading in-cluster config");
       this.kubeConfig.loadFromCluster();
     } else if (kubeconfigPath) {
-      const resolvedPath = kubeconfigPath.replace("~", os.homedir());
+      // Sanitize and validate the path to prevent path injection
+      const resolvedPath = this.sanitizeKubeconfigPath(kubeconfigPath);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
         console.log(`KubernetesService: Loading config from file: ${resolvedPath}`);
         this.kubeConfig.loadFromFile(resolvedPath);
@@ -43,6 +46,33 @@ export class KubernetesService extends EventEmitter {
       console.log("KubernetesService: Loading config from default location");
       this.kubeConfig.loadFromDefault();
     }
+  }
+
+  private sanitizeKubeconfigPath(kubeconfigPath: string): string {
+    // Resolve ~ to home directory
+    let resolvedPath = kubeconfigPath.replace(/^~(?=$|\/|\\)/, os.homedir());
+
+    // Resolve to absolute path and normalize
+    resolvedPath = path.resolve(resolvedPath);
+
+    // Validate the path doesn't contain directory traversal attempts
+    const normalizedInput = path.normalize(kubeconfigPath);
+    if (normalizedInput.includes("..") || normalizedInput.includes("./")) {
+      throw new Error("Invalid kubeconfig path: path traversal attempts are not allowed");
+    }
+
+    // Ensure the resolved path starts with home directory or /etc or /tmp (common kubeconfig locations)
+    const homeDir = os.homedir();
+    const allowedPrefixes = [homeDir, "/etc/kubernetes", "/tmp"];
+    const isAllowed = allowedPrefixes.some((prefix) => resolvedPath.startsWith(prefix));
+
+    if (!isAllowed) {
+      throw new Error(
+        `Invalid kubeconfig path: must be within allowed directories (home, /etc/kubernetes, /tmp)`,
+      );
+    }
+
+    return resolvedPath;
   }
 
   async connect(): Promise<void> {
