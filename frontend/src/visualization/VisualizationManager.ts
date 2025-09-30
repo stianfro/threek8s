@@ -866,45 +866,11 @@ export class VisualizationManager {
   }
 
   public handleClick(_event: MouseEvent): void {
-    const raycaster = this.sceneManager.getRaycaster();
-
-    const allObjects: THREE.Object3D[] = [
-      ...Array.from(this.nodes.values()),
-      ...Array.from(this.pods.values())
-    ];
-
-    const intersects = raycaster.intersectObjects(allObjects, true);
-
-    this.clearSelection();
-
-    if (intersects.length > 0) {
-      const object = this.findParentObject(intersects[0].object);
-      if (object) {
-        if (object instanceof NodeObject) {
-          object.setSelected(true);
-        } else if (object instanceof PodObject) {
-          object.setSelected(true);
-        }
-      }
-    }
+    // Removed click behavior: no longer spins nodes or changes colors
   }
 
   public handleDoubleClick(_event: MouseEvent): void {
-    const raycaster = this.sceneManager.getRaycaster();
-
-    const allObjects: THREE.Object3D[] = [
-      ...Array.from(this.nodes.values()),
-      ...Array.from(this.pods.values())
-    ];
-
-    const intersects = raycaster.intersectObjects(allObjects, true);
-
-    if (intersects.length > 0) {
-      const object = this.findParentObject(intersects[0].object);
-      if (object) {
-        this.sceneManager.focusOnObject(object);
-      }
-    }
+    // Removed double-click zoom behavior
   }
 
   // T015: Priority resolver for hover detection
