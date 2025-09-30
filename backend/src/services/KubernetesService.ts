@@ -5,6 +5,7 @@ import { Namespace } from "../models/Namespace";
 import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 
 export class KubernetesService extends EventEmitter {
   private kubeConfig: KubeConfig;
@@ -31,13 +32,36 @@ export class KubernetesService extends EventEmitter {
       console.log("KubernetesService: Loading in-cluster config");
       this.kubeConfig.loadFromCluster();
     } else if (kubeconfigPath) {
-      const resolvedPath = kubeconfigPath.replace("~", os.homedir());
-      if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
-        console.log(`KubernetesService: Loading config from file: ${resolvedPath}`);
-        this.kubeConfig.loadFromFile(resolvedPath);
-      } else {
-        throw new Error(`Kubeconfig file not found or is not a file: ${resolvedPath}`);
+      // Sanitize and validate the path to prevent path traversal attacks
+      const homeDir = os.homedir();
+      const expandedPath = kubeconfigPath.replace("~", homeDir);
+
+      // Resolve to absolute path and normalize (removes .., ., etc.)
+      const resolvedPath = path.resolve(expandedPath);
+
+      // Get real path (resolves symlinks) and verify file exists
+      let realPath: string;
+      try {
+        realPath = fs.realpathSync(resolvedPath);
+      } catch (error) {
+        throw new Error(`Kubeconfig file not found: ${kubeconfigPath}`);
       }
+
+      // Verify the resolved path is within allowed directories (home or /etc/kubernetes)
+      const allowedPaths = [homeDir, '/etc/kubernetes'];
+      const isAllowed = allowedPaths.some(allowedPath => realPath.startsWith(allowedPath));
+
+      if (!isAllowed) {
+        throw new Error(`Kubeconfig path not allowed: ${kubeconfigPath}. Must be within home directory or /etc/kubernetes.`);
+      }
+
+      // Verify it's actually a file
+      if (!fs.statSync(realPath).isFile()) {
+        throw new Error(`Kubeconfig path is not a file: ${kubeconfigPath}`);
+      }
+
+      console.log(`KubernetesService: Loading config from file: ${realPath}`);
+      this.kubeConfig.loadFromFile(realPath);
     } else {
       // Try to load from default location
       console.log("KubernetesService: Loading config from default location");

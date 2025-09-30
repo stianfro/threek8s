@@ -35,6 +35,8 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -64,6 +66,8 @@ jobs:
   package:
     needs: lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       chart_version: ${{ steps.version.outputs.chart_version }}
       app_version: ${{ steps.version.outputs.app_version }}
