@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.4.0](https://github.com/stianfro/threek8s/compare/v1.3.0...v1.4.0) (2025-09-30)
+
+
+### Features
+
+* implement comprehensive security scanning ([#35](https://github.com/stianfro/threek8s/issues/35)) ([00fea13](https://github.com/stianfro/threek8s/commit/00fea138bb6066b4669a437f9723ab08ec488f13))
+
+
+### Bug Fixes
+
+* update Docker base images and apply security patches ([#36](https://github.com/stianfro/threek8s/issues/36)) ([ee83b4d](https://github.com/stianfro/threek8s/commit/ee83b4dba559f6e8cb229daa9fc5eabc5d428c2e))
+
+
+### Documentation
+
+* update readme ([7ecd3b7](https://github.com/stianfro/threek8s/commit/7ecd3b72b31ccf321102adf33bfbadecdfd8354f))
+
 ## [1.3.0](https://github.com/stianfro/threek8s/compare/v1.2.3...v1.3.0) (2025-09-30)
 
 
