@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/stianfro/threek8s/compare/v1.4.0...v1.4.1) (2025-09-30)
+
+
+### Bug Fixes
+
+* resolve 9 GitHub security issues ([#37](https://github.com/stianfro/threek8s/issues/37)) ([20aece3](https://github.com/stianfro/threek8s/commit/20aece304608e421e6c82d079ef091cc02eee912))
+
 ## [1.4.0](https://github.com/stianfro/threek8s/compare/v1.3.0...v1.4.0) (2025-09-30)
 
 
