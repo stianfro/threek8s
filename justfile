@@ -196,6 +196,44 @@ check-k8s:
     @kubectl get pods --all-namespaces --no-headers 2>/dev/null | wc -l | xargs echo "  Pods:"
     @kubectl get namespaces --no-headers 2>/dev/null | wc -l | xargs echo "  Namespaces:"
 
+# Setup KWOK test cluster with 40 nodes across 3 zones
+kwok-setup:
+    @echo "🧪 Setting up KWOK test cluster..."
+    @./scripts/setup-kwok-cluster.sh
+
+# Cleanup KWOK test cluster
+kwok-cleanup:
+    @echo "🧹 Cleaning up KWOK test cluster..."
+    @./scripts/cleanup-kwok-cluster.sh
+
+# Show KWOK cluster info
+kwok-info:
+    @echo "📊 KWOK Cluster Information"
+    @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    @echo ""
+    @if kwokctl get clusters 2>/dev/null | grep -q "threek8s-test"; then \
+        echo "✅ Cluster: threek8s-test (running)"; \
+        echo ""; \
+        echo "📍 Context: $$(kubectl config current-context)"; \
+        echo ""; \
+        echo "📦 Nodes by zone:"; \
+        kubectl get nodes -L topology.kubernetes.io/zone --no-headers 2>/dev/null | \
+            awk '{print $$6}' | sort | uniq -c | awk '{printf "   %s: %d nodes\n", $$2, $$1}'; \
+        echo ""; \
+        echo "🎯 Total pods: $$(kubectl get pods -n test-workload --no-headers 2>/dev/null | wc -l | xargs)"; \
+        echo ""; \
+        echo "🔗 Next steps:"; \
+        echo "   just dev     - Start threek8s with this cluster"; \
+        echo "   just kwok-cleanup - Remove the test cluster"; \
+    else \
+        echo "❌ KWOK test cluster not found"; \
+        echo ""; \
+        echo "🔗 Run 'just kwok-setup' to create it"; \
+    fi
+
+# Setup KWOK cluster and start development servers
+kwok-dev: kwok-setup dev
+
 # Show logs from both servers (requires both to be running)
 logs:
     @echo "📜 Monitoring application..."
@@ -279,6 +317,12 @@ help:
     @echo "  just test    - Run all tests"
     @echo "  just lint    - Lint all code"
     @echo "  just format  - Format all code"
+    @echo ""
+    @echo "Testing with KWOK:"
+    @echo "  just kwok-setup   - Create test cluster (40 nodes, 3 zones)"
+    @echo "  just kwok-dev     - Setup KWOK cluster and start dev servers"
+    @echo "  just kwok-info    - Show KWOK cluster status"
+    @echo "  just kwok-cleanup - Remove KWOK test cluster"
     @echo ""
     @echo "Production:"
     @echo "  just build   - Build for production"

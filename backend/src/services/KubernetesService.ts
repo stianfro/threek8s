@@ -122,6 +122,10 @@ export class KubernetesService extends EventEmitter {
       ? 'control-plane'
       : 'worker';
 
+    // Extract zone from topology label
+    const labels = node.metadata?.labels || {};
+    const zone = labels['topology.kubernetes.io/zone'] || 'N/A';
+
     return {
       name: node.metadata?.name || '',
       uid: node.metadata?.uid || '',
@@ -146,8 +150,9 @@ export class KubernetesService extends EventEmitter {
         reason: c.reason || '',
         message: c.message || '',
       })),
-      labels: node.metadata?.labels || {},
+      labels,
       creationTimestamp: new Date(node.metadata?.creationTimestamp),
+      zone,
     };
   }
 

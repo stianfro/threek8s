@@ -11,6 +11,7 @@ export interface KubernetesNode {
   position?: Vector3;
   labels: Record<string, string>;
   creationTimestamp: Date;
+  zone: string; // Derived from topology.kubernetes.io/zone label, defaults to "N/A"
 
   // Additional metadata
   podCount?: number;
@@ -32,6 +33,7 @@ export class KubernetesNodeModel implements KubernetesNode {
   position?: Vector3;
   labels: Record<string, string>;
   creationTimestamp: Date;
+  zone: string;
 
   constructor(data: KubernetesNode) {
     this.name = data.name;
@@ -44,6 +46,7 @@ export class KubernetesNodeModel implements KubernetesNode {
     this.position = data.position;
     this.labels = data.labels;
     this.creationTimestamp = data.creationTimestamp;
+    this.zone = data.zone;
   }
 
   isReady(): boolean {

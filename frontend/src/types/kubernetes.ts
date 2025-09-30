@@ -28,6 +28,7 @@ export interface KubernetesNode {
   operatingSystem: string;
   architecture: string;
   creationTimestamp: string;
+  zone: string; // Derived from topology.kubernetes.io/zone label, defaults to "N/A"
 }
 
 export interface Pod {
