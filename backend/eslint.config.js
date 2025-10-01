@@ -35,6 +35,7 @@ export default [
         clearTimeout: 'readonly',
         NodeJS: 'readonly',
         URLSearchParams: 'readonly',
+        AbortController: 'readonly',
       },
     },
     plugins: {
