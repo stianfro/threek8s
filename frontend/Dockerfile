@@ -57,7 +57,7 @@ set -e
 
 # Generate runtime config
 echo "Generating runtime configuration..."
-envsubst '${VITE_API_URL} ${VITE_WS_URL}' < /usr/share/nginx/html/config.js.template > /usr/share/nginx/html/config.js
+envsubst '${VITE_API_URL} ${VITE_WS_URL} ${VITE_AUTH_ENABLED} ${VITE_OIDC_AUTHORITY} ${VITE_OIDC_CLIENT_ID} ${VITE_OIDC_REDIRECT_URI} ${VITE_OIDC_SCOPE}' < /usr/share/nginx/html/config.js.template > /usr/share/nginx/html/config.js
 echo "Runtime configuration generated:"
 cat /usr/share/nginx/html/config.js
 
@@ -84,6 +84,11 @@ USER 1001
 # Environment variables for runtime configuration
 ENV VITE_API_URL=http://localhost:3001/api
 ENV VITE_WS_URL=ws://localhost:3001/ws
+ENV VITE_AUTH_ENABLED=false
+ENV VITE_OIDC_AUTHORITY=
+ENV VITE_OIDC_CLIENT_ID=
+ENV VITE_OIDC_REDIRECT_URI=
+ENV VITE_OIDC_SCOPE="openid profile email"
 
 # Expose port 8080 for the frontend (OpenShift compatible)
 EXPOSE 8080
