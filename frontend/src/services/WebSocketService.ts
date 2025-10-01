@@ -19,6 +19,7 @@ export class WebSocketService {
   private heartbeatTimer: number | null = null;
   private reconnectTimer: number | null = null;
   private isManualClose: boolean = false;
+  private getAccessToken: (() => string | null) | null = null;
 
   private onStateUpdateCallback?: (state: StateUpdate) => void;
   private onEventCallback?: (event: EventMessage) => void;
@@ -32,6 +33,14 @@ export class WebSocketService {
     this.heartbeatInterval = options.heartbeatInterval || 30000;
   }
 
+  /**
+   * Set function to retrieve access token
+   * Token is added to WebSocket URL as query parameter
+   */
+  setAccessTokenProvider(getToken: () => string | null): void {
+    this.getAccessToken = getToken;
+  }
+
   public connect(): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       console.log("WebSocket already connected");
@@ -42,7 +51,17 @@ export class WebSocketService {
     this.updateStatus("connecting");
 
     try {
-      this.ws = new WebSocket(this.url);
+      // Build WebSocket URL with optional token
+      let wsUrl = this.url;
+      if (this.getAccessToken) {
+        const token = this.getAccessToken();
+        if (token) {
+          const separator = this.url.includes("?") ? "&" : "?";
+          wsUrl = `${this.url}${separator}token=${encodeURIComponent(token)}`;
+        }
+      }
+
+      this.ws = new WebSocket(wsUrl);
       this.setupEventHandlers();
     } catch (error) {
       console.error("Failed to create WebSocket:", error);

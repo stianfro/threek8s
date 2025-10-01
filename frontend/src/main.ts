@@ -4,6 +4,7 @@ import { VisualizationManager } from "./visualization/VisualizationManager";
 import { WebSocketService } from "./services/WebSocketService";
 import { ApiService } from "./services/ApiService";
 import { StateManager } from "./services/StateManager";
+import { AuthService } from "./services/AuthService";
 import type { StateUpdate, EventMessage } from "./types/kubernetes";
 import { loadRuntimeConfig } from "./config/runtime";
 
@@ -15,6 +16,33 @@ async function initApp() {
   const WS_URL = config.wsUrl;
 
   console.log("Using configuration:", { API_URL, WS_URL });
+
+  // Check if we're handling an OAuth callback
+  if (config.authEnabled && window.location.pathname === "/callback") {
+    await handleOAuthCallback(config);
+    return;
+  }
+
+  // Initialize auth service
+  const authService = new AuthService({
+    enabled: config.authEnabled,
+    authority: config.oidcAuthority || "",
+    clientId: config.oidcClientId || "",
+    redirectUri: config.oidcRedirectUri || `${window.location.origin}/callback`,
+    scope: config.oidcScope || "openid profile email",
+  });
+
+  // Initialize auth if enabled
+  if (config.authEnabled) {
+    const user = await authService.initialize();
+    if (!user || user.expired) {
+      // Not authenticated, redirect to login
+      console.log("Not authenticated, redirecting to login");
+      showLoginScreen(authService);
+      return;
+    }
+    console.log("User authenticated:", user.profile);
+  }
   // Create container
   const app = document.querySelector<HTMLDivElement>("#app");
   if (!app) {
@@ -56,6 +84,12 @@ async function initApp() {
   const stateManager = new StateManager();
   const apiService = new ApiService(API_URL);
   const wsService = new WebSocketService({ url: WS_URL });
+
+  // Set access token providers if auth is enabled
+  if (config.authEnabled && authService) {
+    apiService.setAccessTokenProvider(() => authService.getAccessToken());
+    wsService.setAccessTokenProvider(() => authService.getAccessToken());
+  }
 
   // Set up state change listener
   stateManager.onStateChange((state) => {
@@ -209,6 +243,60 @@ function showError(message: string) {
   setTimeout(() => {
     errorElement.remove();
   }, 5000);
+}
+
+// Helper function to handle OAuth callback
+async function handleOAuthCallback(config: any) {
+  console.log("Handling OAuth callback");
+
+  const authService = new AuthService({
+    enabled: config.authEnabled,
+    authority: config.oidcAuthority || "",
+    clientId: config.oidcClientId || "",
+    redirectUri: config.oidcRedirectUri || `${window.location.origin}/callback`,
+    scope: config.oidcScope || "openid profile email",
+  });
+
+  try {
+    await authService.handleCallback();
+    // Redirect to root after successful authentication
+    window.location.href = "/";
+  } catch (error) {
+    console.error("OAuth callback error:", error);
+    document.body.innerHTML = `
+      <div style="padding: 40px; text-align: center;">
+        <h1>Authentication Error</h1>
+        <p>Failed to complete authentication. Please try again.</p>
+        <button onclick="window.location.href='/'">Return to Home</button>
+      </div>
+    `;
+  }
+}
+
+// Helper function to show login screen
+function showLoginScreen(authService: AuthService) {
+  const app = document.querySelector<HTMLDivElement>("#app");
+  if (!app) return;
+
+  app.innerHTML = `
+    <div class="login-screen">
+      <div class="login-container">
+        <h1>ThreeK8s</h1>
+        <p>3D Kubernetes Cluster Visualization</p>
+        <button id="login-btn" class="login-button">Sign In</button>
+      </div>
+    </div>
+  `;
+
+  const loginBtn = document.getElementById("login-btn");
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      authService.login().catch((error) => {
+        console.error("Login failed:", error);
+        showError("Login failed. Please try again.");
+      });
+    });
+  }
 }
 
 // Initialize app when DOM is ready

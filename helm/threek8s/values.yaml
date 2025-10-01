@@ -118,6 +118,25 @@ backend:
     WS_HEARTBEAT_TIMEOUT: "10000"
     CORS_ORIGINS: "http://localhost:5173,http://threek8s-frontend"
 
+# Authentication configuration (Optional)
+auth:
+  enabled: false
+  oidc:
+    # OIDC provider configuration
+    # Example for Microsoft Entra ID:
+    # issuer: "https://login.microsoftonline.com/{tenant-id}/v2.0"
+    # audience: "{client-id}"
+    # jwksUri: "https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys"
+    # clientId: "{client-id}"
+    # redirectUri: "https://your-domain.com/callback"
+    # scope: "openid profile email"
+    issuer: ""
+    audience: ""
+    jwksUri: ""
+    clientId: ""
+    redirectUri: ""
+    scope: "openid profile email"
+
 # Service Account
 serviceAccount:
   create: true
