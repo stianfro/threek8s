@@ -64,6 +64,7 @@ export class WebSocketService {
       if (token) {
         // Pass token as WebSocket subprotocol (not in URL)
         // Format: ["access_token", base64url-encoded-token]
+        // eslint-disable-next-line no-undef
         const encodedToken = btoa(token).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
         this.ws = new WebSocket(this.url, ["access_token", encodedToken]);
       } else {
