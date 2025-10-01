@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/stianfro/threek8s/compare/v1.6.0...v1.6.1) (2025-10-01)
+
+
+### Bug Fixes
+
+* add auth environment variables to containerized frontend ([#48](https://github.com/stianfro/threek8s/issues/48)) ([75ba573](https://github.com/stianfro/threek8s/commit/75ba5739ab375976bf53f2b7b1658b7e3a581bcd))
+
 ## [1.6.0](https://github.com/stianfro/threek8s/compare/v1.5.1...v1.6.0) (2025-10-01)
 
 
