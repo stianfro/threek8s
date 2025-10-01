@@ -1,14 +1,15 @@
 import { Watch, KubeConfig, CoreV1Api } from "@kubernetes/client-node";
 import { EventEmitter } from "events";
 import { WatchEvent, EventType } from "../models/Events";
+import { IncomingMessage } from "http";
 
 export class WatchManager extends EventEmitter {
   private watch: Watch;
   private kubeConfig: KubeConfig;
   private coreApi: CoreV1Api;
-  private nodeWatchRequest: any;
-  private podWatchRequest: any;
-  private namespaceWatchRequest: any;
+  private nodeWatchRequest: IncomingMessage | null = null;
+  private podWatchRequest: IncomingMessage | null = null;
+  private namespaceWatchRequest: IncomingMessage | null = null;
   private isWatching: boolean = false;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private reconnectAttempts: number = 0;
@@ -41,10 +42,10 @@ export class WatchManager extends EventEmitter {
       this.nodeWatchRequest = await this.watch.watch(
         path,
         {},
-        (type: string, apiObj: any, _watchObj: any) => {
+        (type: string, apiObj: unknown) => {
           this.handleWatchEvent("node", type as EventType, apiObj);
         },
-        (error: any) => {
+        (error: Error) => {
           this.handleWatchError("node", error);
         },
       );
@@ -61,10 +62,10 @@ export class WatchManager extends EventEmitter {
       this.podWatchRequest = await this.watch.watch(
         path,
         { allowWatchBookmarks: true },
-        (type: string, apiObj: any, _watchObj: any) => {
+        (type: string, apiObj: unknown) => {
           this.handleWatchEvent("pod", type as EventType, apiObj);
         },
-        (error: any) => {
+        (error: Error) => {
           this.handleWatchError("pod", error);
         },
       );
@@ -81,10 +82,10 @@ export class WatchManager extends EventEmitter {
       this.namespaceWatchRequest = await this.watch.watch(
         path,
         {},
-        (type: string, apiObj: any, _watchObj: any) => {
+        (type: string, apiObj: unknown) => {
           this.handleWatchEvent("namespace", type as EventType, apiObj);
         },
-        (error: any) => {
+        (error: Error) => {
           this.handleWatchError("namespace", error);
         },
       );
@@ -94,7 +95,7 @@ export class WatchManager extends EventEmitter {
     }
   }
 
-  private handleWatchEvent(resource: string, type: EventType, apiObj: any): void {
+  private handleWatchEvent(resource: string, type: EventType, apiObj: unknown): void {
     const event: WatchEvent = {
       type,
       object: apiObj,
@@ -118,7 +119,7 @@ export class WatchManager extends EventEmitter {
     this.emit("watchEvent", { resource, ...event });
   }
 
-  private handleWatchError(resource: string, error: any): void {
+  private handleWatchError(resource: string, error: Error): void {
     console.error(`Watch error for ${resource}:`, error);
     this.emit("watchError", { resource, error });
 

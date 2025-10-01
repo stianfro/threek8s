@@ -128,7 +128,8 @@ export class WebSocketService {
         if (this.onEventCallback) {
           const nodeEvent: EventMessage = {
             eventType: "node",
-            action: (message.action?.toLowerCase() as any) || "modified",
+            action:
+              (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified",
             resource: message.data,
           };
           this.onEventCallback(nodeEvent);
@@ -138,7 +139,8 @@ export class WebSocketService {
       case "pod_event":
         if (this.onEventCallback) {
           // Convert backend action format (ADDED, MODIFIED, DELETED) to frontend format
-          const action = (message.action?.toLowerCase() as any) || "modified";
+          const action =
+            (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified";
           console.log("[WebSocket] Pod event:", action, message.data);
           const podEvent: EventMessage = {
             eventType: "pod",
@@ -153,7 +155,8 @@ export class WebSocketService {
         if (this.onEventCallback) {
           const namespaceEvent: EventMessage = {
             eventType: "namespace",
-            action: (message.action?.toLowerCase() as any) || "modified",
+            action:
+              (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified",
             resource: message.data,
           };
           this.onEventCallback(namespaceEvent);

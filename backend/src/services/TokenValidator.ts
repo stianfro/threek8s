@@ -33,7 +33,7 @@ export class TokenValidator {
    * @returns Decoded token payload if valid
    * @throws Error if token is invalid or auth is disabled
    */
-  async validateToken(token: string): Promise<any> {
+  async validateToken(token: string): Promise<jwt.JwtPayload | string> {
     if (!this.config.enabled) {
       // When auth is disabled, we still return a valid result but log a warning
       console.warn("Token validation called but auth is disabled");
@@ -77,12 +77,13 @@ export class TokenValidator {
 
           // Manual audience validation for Entra ID tokens
           if (decoded && typeof decoded === "object") {
-            const payload = decoded as any;
-            const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+            const payload = decoded as jwt.JwtPayload & { appid?: string };
+            const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud || ""];
             const appid = payload.appid;
 
             // Check if audience matches our client ID
-            const audienceValid = aud.includes(this.config.audience) || appid === this.config.audience;
+            const audienceValid =
+              aud.includes(this.config.audience) || appid === this.config.audience;
 
             if (!audienceValid) {
               reject(
@@ -94,7 +95,7 @@ export class TokenValidator {
             }
           }
 
-          resolve(decoded);
+          resolve(decoded as jwt.JwtPayload | string);
         },
       );
     });

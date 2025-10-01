@@ -5,7 +5,15 @@ import { WebSocketService } from "./services/WebSocketService";
 import { ApiService } from "./services/ApiService";
 import { StateManager } from "./services/StateManager";
 import { AuthService } from "./services/AuthService";
-import type { StateUpdate, EventMessage } from "./types/kubernetes";
+import type {
+  StateUpdate,
+  EventMessage,
+  KubernetesNode,
+  Pod,
+  Namespace,
+  ClusterInfo,
+  ClusterState,
+} from "./types/kubernetes";
 import { loadRuntimeConfig } from "./config/runtime";
 
 // Create main app
@@ -110,13 +118,13 @@ async function initApp() {
     console.log("[Main] WebSocket event:", event.eventType, event.action);
     switch (event.eventType) {
       case "node":
-        stateManager.handleNodeEvent(event.action, event.resource as any);
+        stateManager.handleNodeEvent(event.action, event.resource as KubernetesNode);
         break;
       case "pod":
-        stateManager.handlePodEvent(event.action, event.resource as any);
+        stateManager.handlePodEvent(event.action, event.resource as Pod);
         break;
       case "namespace":
-        stateManager.handleNamespaceEvent(event.action, event.resource as any);
+        stateManager.handleNamespaceEvent(event.action, event.resource as Namespace);
         break;
     }
   });
@@ -193,14 +201,14 @@ function updateConnectionStatus(status: string) {
   }
 }
 
-function updateClusterInfo(info: any) {
+function updateClusterInfo(info: ClusterInfo) {
   const nameElement = document.querySelector(".cluster-name");
   if (nameElement) {
     nameElement.textContent = info.name || "Unknown Cluster";
   }
 }
 
-function updateUIMetrics(state: any) {
+function updateUIMetrics(state: ClusterState) {
   const nodeCount = document.getElementById("node-count");
   const podCount = document.getElementById("pod-count");
 
@@ -246,7 +254,13 @@ function showError(message: string) {
 }
 
 // Helper function to handle OAuth callback
-async function handleOAuthCallback(config: any) {
+async function handleOAuthCallback(config: {
+  authEnabled: boolean;
+  oidcAuthority?: string;
+  oidcClientId?: string;
+  oidcRedirectUri?: string;
+  oidcScope?: string;
+}) {
   console.log("Handling OAuth callback");
 
   const authService = new AuthService({

@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer, WebSocket, RawData } from "ws";
 import { EventEmitter } from "events";
 import { Server } from "http";
 import { IncomingMessage } from "http";
@@ -151,7 +151,7 @@ export class WebSocketManager extends EventEmitter {
     return undefined;
   }
 
-  private handleClientMessage(clientId: string, data: any): void {
+  private handleClientMessage(clientId: string, data: RawData): void {
     const client = this.clients.get(clientId);
     if (!client) return;
 

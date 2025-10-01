@@ -103,7 +103,16 @@ export class NodeObject extends THREE.Group {
   }
 
   // T013: Add tooltip data provider for nodes
-  public getTooltipData(): any {
+  public getTooltipData(): {
+    type: string;
+    name: string;
+    status: string;
+    role: string;
+    capacity: { cpu: string; memory: string; pods: string };
+    allocatable: { cpu: string; memory: string; pods: string };
+    podCount: number;
+    zone: string;
+  } {
     const node = this.node;
     const podCount = this.children.filter(
       (child) =>

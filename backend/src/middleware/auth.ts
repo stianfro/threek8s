@@ -69,9 +69,9 @@ export function createAuthMiddleware(config: OidcConfig) {
       }
 
       // Manual audience validation for Entra ID tokens
-      const auth = (req as any).auth;
+      const auth = (req as Request & { auth?: { aud?: string | string[]; appid?: string } }).auth;
       if (auth) {
-        const aud = Array.isArray(auth.aud) ? auth.aud : [auth.aud];
+        const aud = Array.isArray(auth.aud) ? auth.aud : [auth.aud || ""];
         const appid = auth.appid;
 
         // Check if audience or appid matches our client ID
@@ -97,7 +97,12 @@ export function createAuthMiddleware(config: OidcConfig) {
 /**
  * Error handler for JWT authentication errors
  */
-export function authErrorHandler(err: any, req: Request, res: Response, next: NextFunction): void {
+export function authErrorHandler(
+  err: Error & { name?: string },
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
   if (err.name === "UnauthorizedError") {
     res.status(401).json({
       error: "UNAUTHORIZED",

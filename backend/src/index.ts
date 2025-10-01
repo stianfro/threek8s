@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { createServer } from "http";
+import { createServer, Server } from "http";
 import { KubeConfig } from "@kubernetes/client-node";
 import { createApp } from "./app";
 import { KubernetesService } from "./services/KubernetesService";
@@ -103,7 +103,7 @@ async function startServer() {
 }
 
 function shutdown(
-  server: any,
+  server: Server,
   eventProcessor: EventProcessor,
   watchManager: WatchManager,
   webSocketManager: WebSocketManager,

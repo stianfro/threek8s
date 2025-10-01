@@ -211,7 +211,15 @@ export class ClusterStateModel implements ClusterState {
   }
 
   // Serialization
-  toJSON(): any {
+  toJSON(): {
+    nodes: KubernetesNode[];
+    pods: Pod[];
+    namespaces: Namespace[];
+    connectionStatus: ConnectionStatus;
+    lastUpdated: Date;
+    metrics: ClusterMetrics;
+    clusterInfo?: { name: string; version: string; apiServer?: string };
+  } {
     return {
       nodes: Array.from(this.nodes.values()),
       pods: Array.from(this.pods.values()),
