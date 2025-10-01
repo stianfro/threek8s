@@ -1,8 +1,8 @@
 apiVersion: v2
 name: threek8s
 description: A Helm chart for ThreeK8s - 3D Kubernetes cluster visualization tool
-version: 1.5.0
-appVersion: 1.5.0
+version: 1.5.1
+appVersion: 1.5.1
 type: application
 keywords:
   - kubernetes
