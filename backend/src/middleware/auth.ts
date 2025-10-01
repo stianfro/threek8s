@@ -29,7 +29,7 @@ function isValidKioskToken(token: string, configToken: string): boolean {
 
   try {
     return crypto.timingSafeEqual(configBuffer, providedBuffer);
-  } catch (error) {
+  } catch {
     return false;
   }
 }

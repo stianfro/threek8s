@@ -7,6 +7,7 @@
 
 import jwksRsa from "jwks-rsa";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { OidcConfig } from "../config/oidc";
 
 export class TokenValidator {
@@ -175,15 +176,14 @@ export class TokenValidator {
 
     // Use crypto.timingSafeEqual for constant-time comparison
     try {
-      const crypto = require("crypto");
       const isValid = crypto.timingSafeEqual(configToken, providedToken);
       if (!isValid) {
         console.debug("Kiosk token does not match configured value");
       }
       return isValid;
-    } catch (error) {
+    } catch (err) {
       // Fallback if timingSafeEqual fails (shouldn't happen in Node.js)
-      console.error("Error in constant-time comparison:", error);
+      console.error("Error in constant-time comparison:", err);
       return false;
     }
   }
