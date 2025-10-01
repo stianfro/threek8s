@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/stianfro/threek8s/compare/v1.5.0...v1.5.1) (2025-10-01)
+
+
+### Bug Fixes
+
+* check SARIF file exists before uploading to Security tab ([6f739c3](https://github.com/stianfro/threek8s/commit/6f739c336373a9b2d585949464a1492cd52a2678))
+
 ## [1.5.0](https://github.com/stianfro/threek8s/compare/v1.4.1...v1.5.0) (2025-10-01)
 
 
