@@ -57,6 +57,11 @@ export class TokenValidator {
       };
     }
 
+    // If OIDC is not configured, only kiosk auth is available
+    if (!this.config.jwksUri || !this.config.issuer || !this.config.audience) {
+      throw new Error("Invalid authentication token");
+    }
+
     // Decode token header to get kid
     const decodedHeader = jwt.decode(token, { complete: true });
     if (!decodedHeader || typeof decodedHeader === "string") {
@@ -152,6 +157,7 @@ export class TokenValidator {
    */
   private isValidKioskToken(token: string): boolean {
     if (!this.config.kioskAuthToken) {
+      console.debug("No kiosk token configured");
       return false;
     }
 
@@ -161,15 +167,23 @@ export class TokenValidator {
 
     // If lengths differ, still do comparison to maintain constant time
     if (configToken.length !== providedToken.length) {
+      console.debug(
+        `Kiosk token length mismatch: expected ${configToken.length}, got ${providedToken.length}`,
+      );
       return false;
     }
 
     // Use crypto.timingSafeEqual for constant-time comparison
     try {
       const crypto = require("crypto");
-      return crypto.timingSafeEqual(configToken, providedToken);
+      const isValid = crypto.timingSafeEqual(configToken, providedToken);
+      if (!isValid) {
+        console.debug("Kiosk token does not match configured value");
+      }
+      return isValid;
     } catch (error) {
       // Fallback if timingSafeEqual fails (shouldn't happen in Node.js)
+      console.error("Error in constant-time comparison:", error);
       return false;
     }
   }
