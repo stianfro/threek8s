@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.5.0](https://github.com/stianfro/threek8s/compare/v1.4.1...v1.5.0) (2025-10-01)
+
+
+### Features
+
+* add optional OIDC authentication support ([#40](https://github.com/stianfro/threek8s/issues/40)) ([8a3f691](https://github.com/stianfro/threek8s/commit/8a3f691dc48a0457a7d10dafe27c1bc0b286ae23))
+* implement comprehensive security improvements ([#41](https://github.com/stianfro/threek8s/issues/41)) ([ef823e7](https://github.com/stianfro/threek8s/commit/ef823e75f95602af626977e45d7499230d8d106f))
+
+
+### Bug Fixes
+
+* add security-events permission to release workflow ([#42](https://github.com/stianfro/threek8s/issues/42)) ([f2ab321](https://github.com/stianfro/threek8s/commit/f2ab321440d8d0d4749346e04c1454d75259ff3a))
+* allow releases to proceed despite Trivy vulnerabilities ([#39](https://github.com/stianfro/threek8s/issues/39)) ([d87b07c](https://github.com/stianfro/threek8s/commit/d87b07cdd13576b0235a5a3af04ccbcab1155459))
+
 ## [1.4.1](https://github.com/stianfro/threek8s/compare/v1.4.0...v1.4.1) (2025-09-30)
 
 
