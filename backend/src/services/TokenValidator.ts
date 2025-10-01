@@ -7,6 +7,7 @@
 
 import jwksRsa from "jwks-rsa";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { OidcConfig } from "../config/oidc";
 
 export class TokenValidator {
@@ -45,6 +46,21 @@ export class TokenValidator {
 
     if (!token) {
       throw new Error("No token provided");
+    }
+
+    // Check kiosk token first (fast path)
+    if (this.config.kioskAuthToken && this.isValidKioskToken(token)) {
+      console.debug("Kiosk token validated successfully");
+      return {
+        sub: "kiosk",
+        kiosk_auth: true,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
+    // If OIDC is not configured, only kiosk auth is available
+    if (!this.config.jwksUri || !this.config.issuer || !this.config.audience) {
+      throw new Error("Invalid authentication token");
     }
 
     // Decode token header to get kid
@@ -133,5 +149,42 @@ export class TokenValidator {
    */
   isAuthEnabled(): boolean {
     return this.config.enabled;
+  }
+
+  /**
+   * Validate kiosk token using constant-time comparison
+   * @param token Token to validate
+   * @returns True if token matches configured kiosk token
+   */
+  private isValidKioskToken(token: string): boolean {
+    if (!this.config.kioskAuthToken) {
+      console.debug("No kiosk token configured");
+      return false;
+    }
+
+    // Use constant-time comparison to prevent timing attacks
+    const configToken = Buffer.from(this.config.kioskAuthToken, "utf-8");
+    const providedToken = Buffer.from(token, "utf-8");
+
+    // If lengths differ, still do comparison to maintain constant time
+    if (configToken.length !== providedToken.length) {
+      console.debug(
+        `Kiosk token length mismatch: expected ${configToken.length}, got ${providedToken.length}`,
+      );
+      return false;
+    }
+
+    // Use crypto.timingSafeEqual for constant-time comparison
+    try {
+      const isValid = crypto.timingSafeEqual(configToken, providedToken);
+      if (!isValid) {
+        console.debug("Kiosk token does not match configured value");
+      }
+      return isValid;
+    } catch (err) {
+      // Fallback if timingSafeEqual fails (shouldn't happen in Node.js)
+      console.error("Error in constant-time comparison:", err);
+      return false;
+    }
   }
 }

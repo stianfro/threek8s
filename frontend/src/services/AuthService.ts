@@ -20,6 +20,7 @@ export class AuthService {
   private config: AuthConfig;
   private currentUser: User | null = null;
   private authChangeCallbacks: Array<(user: User | null) => void> = [];
+  private kioskToken: string | null = null;
 
   constructor(config: AuthConfig) {
     this.config = config;
@@ -150,6 +151,10 @@ export class AuthService {
    * Get access token
    */
   getAccessToken(): string | null {
+    // Return kiosk token if set (takes precedence)
+    if (this.kioskToken) {
+      return this.kioskToken;
+    }
     return this.currentUser?.access_token || null;
   }
 
@@ -159,6 +164,10 @@ export class AuthService {
   isAuthenticated(): boolean {
     if (!this.config.enabled) {
       return true; // When auth is disabled, consider everyone authenticated
+    }
+    // Check kiosk token first
+    if (this.kioskToken) {
+      return true;
     }
     return this.currentUser !== null && !this.currentUser.expired;
   }
@@ -200,5 +209,18 @@ export class AuthService {
       console.error("Token renewal failed:", error);
       throw error;
     }
+  }
+
+  /**
+   * Set kiosk authentication token
+   * Used for URL-based authentication in kiosk environments
+   */
+  setKioskToken(token: string): void {
+    if (!token || token.trim().length === 0) {
+      console.warn("Invalid kiosk token provided");
+      return;
+    }
+    this.kioskToken = token.trim();
+    console.log("Kiosk authentication token set");
   }
 }

@@ -25,6 +25,10 @@ async function initApp() {
 
   console.log("Using configuration:", { API_URL, WS_URL });
 
+  // Check for kiosk token in URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const kioskToken = urlParams.get("token");
+
   // Check if we're handling an OAuth callback
   if (config.authEnabled && window.location.pathname === "/callback") {
     await handleOAuthCallback(config);
@@ -40,8 +44,16 @@ async function initApp() {
     scope: config.oidcScope || "openid profile email",
   });
 
-  // Initialize auth if enabled
-  if (config.authEnabled) {
+  // Handle kiosk token authentication
+  if (kioskToken && config.authEnabled) {
+    console.log("Kiosk token detected in URL, using token-based authentication");
+    authService.setKioskToken(kioskToken);
+
+    // Remove token from URL for security
+    const newUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, newUrl);
+  } else if (config.authEnabled) {
+    // Initialize OIDC auth if enabled and no kiosk token
     const user = await authService.initialize();
     if (!user || user.expired) {
       // Not authenticated, redirect to login
