@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/stianfro/threek8s/compare/v1.5.1...v1.6.0) (2025-10-01)
+
+
+### Features
+
+* add kiosk token authentication for kiosk systems ([#45](https://github.com/stianfro/threek8s/issues/45)) ([b337717](https://github.com/stianfro/threek8s/commit/b33771759c86b278deba18dc3b91f36446c8a3e5))
+
 ## [1.5.1](https://github.com/stianfro/threek8s/compare/v1.5.0...v1.5.1) (2025-10-01)
 
 
