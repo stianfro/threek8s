@@ -267,10 +267,18 @@ VITE_WS_URL=ws://localhost:3001/ws      # WebSocket URL
    - **Application (client) ID**: Found on the Overview page
    - **Directory (tenant) ID**: Found on the Overview page
 
-3. **Configure API permissions** (Optional):
-   - Go to API permissions
-   - The default `User.Read` permission is sufficient for basic authentication
-   - Add additional permissions if you need more user information
+3. **Expose an API scope**:
+   - Go to Expose an API
+   - Click **Add a scope**
+   - Accept the default Application ID URI: `api://{client-id}` or set a custom one
+   - Scope name: `access_as_user`
+   - Who can consent: **Admins and users**
+   - Admin consent display name: `Access threek8s API`
+   - Admin consent description: `Allow the application to access threek8s API on behalf of the signed-in user`
+   - User consent display name: `Access threek8s API`
+   - User consent description: `Allow the application to access threek8s API on your behalf`
+   - State: **Enabled**
+   - Click **Add scope**
 
 4. **Configure backend** (`backend/.env`):
    ```env
@@ -286,7 +294,7 @@ VITE_WS_URL=ws://localhost:3001/ws      # WebSocket URL
    VITE_OIDC_AUTHORITY=https://login.microsoftonline.com/{tenant-id}/v2.0
    VITE_OIDC_CLIENT_ID={client-id}
    VITE_OIDC_REDIRECT_URI=http://localhost:5173/callback
-   VITE_OIDC_SCOPE=openid profile email
+   VITE_OIDC_SCOPE=api://{client-id}/access_as_user openid profile
    ```
 
 6. **Replace placeholders**:
@@ -317,7 +325,7 @@ VITE_AUTH_ENABLED=true
 VITE_OIDC_AUTHORITY=https://login.microsoftonline.com/{tenant-id}/v2.0
 VITE_OIDC_CLIENT_ID={client-id}
 VITE_OIDC_REDIRECT_URI=https://your-domain.com/callback
-VITE_OIDC_SCOPE=openid profile email
+VITE_OIDC_SCOPE=api://{client-id}/access_as_user openid profile
 ```
 
 #### Helm Deployment with Authentication
@@ -334,7 +342,7 @@ auth:
     jwksUri: "https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys"
     clientId: "{client-id}"
     redirectUri: "https://your-domain.com/callback"
-    scope: "openid profile email"
+    scope: "api://{client-id}/access_as_user openid profile"
 ```
 
 Deploy with auth enabled:

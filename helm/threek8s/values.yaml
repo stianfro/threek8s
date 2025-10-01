@@ -129,13 +129,13 @@ auth:
     # jwksUri: "https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys"
     # clientId: "{client-id}"
     # redirectUri: "https://your-domain.com/callback"
-    # scope: "openid profile email"
+    # scope: "api://{client-id}/access_as_user openid profile"
     issuer: ""
     audience: ""
     jwksUri: ""
     clientId: ""
     redirectUri: ""
-    scope: "openid profile email"
+    scope: "api://your-client-id/access_as_user openid profile"
 
 # Service Account
 serviceAccount:
