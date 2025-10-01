@@ -10,6 +10,7 @@ export interface OidcConfig {
   issuer: string;
   audience: string;
   jwksUri: string;
+  kioskAuthToken?: string;
 }
 
 /**
@@ -17,6 +18,7 @@ export interface OidcConfig {
  */
 export function loadOidcConfig(): OidcConfig {
   const enabled = process.env.AUTH_ENABLED === "true";
+  const kioskAuthToken = process.env.KIOSK_AUTH_TOKEN;
 
   if (!enabled) {
     console.log("Authentication is disabled (AUTH_ENABLED=false)");
@@ -25,6 +27,7 @@ export function loadOidcConfig(): OidcConfig {
       issuer: "",
       audience: "",
       jwksUri: "",
+      kioskAuthToken,
     };
   }
 
@@ -32,21 +35,31 @@ export function loadOidcConfig(): OidcConfig {
   const audience = process.env.OIDC_AUDIENCE || "";
   const jwksUri = process.env.OIDC_JWKS_URI || "";
 
-  // Validate required fields when auth is enabled
-  if (!issuer || !audience || !jwksUri) {
+  // Check if either OIDC or kiosk auth is configured
+  const hasOidcConfig = issuer && audience && jwksUri;
+  const hasKioskAuth = kioskAuthToken && kioskAuthToken.length > 0;
+
+  if (!hasOidcConfig && !hasKioskAuth) {
     throw new Error(
-      "OIDC configuration incomplete. When AUTH_ENABLED=true, you must set: OIDC_ISSUER, OIDC_AUDIENCE, OIDC_JWKS_URI",
+      "Authentication configuration incomplete. When AUTH_ENABLED=true, you must set either: " +
+        "(OIDC_ISSUER, OIDC_AUDIENCE, OIDC_JWKS_URI) or KIOSK_AUTH_TOKEN",
     );
   }
 
   console.log("Authentication is enabled");
-  console.log(`OIDC Issuer: ${issuer}`);
-  console.log(`OIDC Audience: ${audience}`);
+  if (hasOidcConfig) {
+    console.log(`OIDC Issuer: ${issuer}`);
+    console.log(`OIDC Audience: ${audience}`);
+  }
+  if (hasKioskAuth) {
+    console.log("Kiosk authentication token configured");
+  }
 
   return {
     enabled: true,
     issuer,
     audience,
     jwksUri,
+    kioskAuthToken,
   };
 }

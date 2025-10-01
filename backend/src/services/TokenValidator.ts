@@ -47,6 +47,16 @@ export class TokenValidator {
       throw new Error("No token provided");
     }
 
+    // Check kiosk token first (fast path)
+    if (this.config.kioskAuthToken && this.isValidKioskToken(token)) {
+      console.debug("Kiosk token validated successfully");
+      return {
+        sub: "kiosk",
+        kiosk_auth: true,
+        timestamp: new Date().toISOString(),
+      };
+    }
+
     // Decode token header to get kid
     const decodedHeader = jwt.decode(token, { complete: true });
     if (!decodedHeader || typeof decodedHeader === "string") {
@@ -133,5 +143,34 @@ export class TokenValidator {
    */
   isAuthEnabled(): boolean {
     return this.config.enabled;
+  }
+
+  /**
+   * Validate kiosk token using constant-time comparison
+   * @param token Token to validate
+   * @returns True if token matches configured kiosk token
+   */
+  private isValidKioskToken(token: string): boolean {
+    if (!this.config.kioskAuthToken) {
+      return false;
+    }
+
+    // Use constant-time comparison to prevent timing attacks
+    const configToken = Buffer.from(this.config.kioskAuthToken, "utf-8");
+    const providedToken = Buffer.from(token, "utf-8");
+
+    // If lengths differ, still do comparison to maintain constant time
+    if (configToken.length !== providedToken.length) {
+      return false;
+    }
+
+    // Use crypto.timingSafeEqual for constant-time comparison
+    try {
+      const crypto = require("crypto");
+      return crypto.timingSafeEqual(configToken, providedToken);
+    } catch (error) {
+      // Fallback if timingSafeEqual fails (shouldn't happen in Node.js)
+      return false;
+    }
   }
 }
