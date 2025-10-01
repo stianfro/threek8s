@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { createServer } from "http";
+import { createServer, Server } from "http";
 import { KubeConfig } from "@kubernetes/client-node";
 import { createApp } from "./app";
 import { KubernetesService } from "./services/KubernetesService";
@@ -7,6 +7,8 @@ import { WatchManager } from "./services/WatchManager";
 import { StateManager } from "./services/StateManager";
 import { WebSocketManager } from "./services/WebSocketManager";
 import { EventProcessor } from "./services/EventProcessor";
+import { loadOidcConfig } from "./config/oidc";
+import { TokenValidator } from "./services/TokenValidator";
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +22,12 @@ const WS_HEARTBEAT_TIMEOUT = parseInt(process.env.WS_HEARTBEAT_TIMEOUT || "10000
 async function startServer() {
   try {
     console.log("Starting ThreeK8s backend...");
+
+    // Load OIDC configuration
+    const oidcConfig = loadOidcConfig();
+
+    // Initialize token validator
+    const tokenValidator = new TokenValidator(oidcConfig);
 
     // Initialize Kubernetes configuration
     const kubeConfig = new KubeConfig();
@@ -44,16 +52,17 @@ async function startServer() {
     const watchManager = new WatchManager(kubeConfig);
 
     // Create Express app
-    const app = createApp(kubernetesService, stateManager);
+    const app = createApp(kubernetesService, stateManager, oidcConfig);
 
     // Create HTTP server
     const server = createServer(app);
 
-    // Initialize WebSocket manager
+    // Initialize WebSocket manager with token validator
     const webSocketManager = new WebSocketManager(
       server,
       WS_HEARTBEAT_INTERVAL,
       WS_HEARTBEAT_TIMEOUT,
+      tokenValidator,
     );
 
     // Initialize event processor
@@ -94,7 +103,7 @@ async function startServer() {
 }
 
 function shutdown(
-  server: any,
+  server: Server,
   eventProcessor: EventProcessor,
   watchManager: WatchManager,
   webSocketManager: WebSocketManager,

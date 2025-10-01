@@ -130,7 +130,7 @@ export interface WebSocketMessage {
     | "pod_event"
     | "namespace_event"
     | "metrics";
-  data?: any;
+  data?: unknown;
   action?: string;
   timestamp?: string;
 }

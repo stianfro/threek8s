@@ -3,7 +3,7 @@ import { KubernetesService } from "./KubernetesService";
 import { WatchManager } from "./WatchManager";
 import { StateManager } from "./StateManager";
 import { WebSocketManager } from "./WebSocketManager";
-import { WatchEvent, WebSocketMessageFactory } from "../models/Events";
+import { WatchEvent, WebSocketMessageFactory, EventType } from "../models/Events";
 import { KubernetesNode } from "../models/KubernetesNode";
 import { Pod } from "../models/Pod";
 import { Namespace } from "../models/Namespace";
@@ -98,7 +98,7 @@ export class EventProcessor extends EventEmitter {
   private queueEvent(event: WatchEvent, resourceType: string): void {
     this.eventQueue.push({
       ...event,
-      object: { ...event.object, _resourceType: resourceType },
+      object: { ...(event.object as object), _resourceType: resourceType },
     });
   }
 
@@ -124,8 +124,9 @@ export class EventProcessor extends EventEmitter {
   }
 
   private processEvent(event: WatchEvent): void {
-    const resourceType = event.object._resourceType;
-    delete event.object._resourceType;
+    const obj = event.object as { _resourceType?: string };
+    const resourceType = obj._resourceType;
+    delete obj._resourceType;
 
     switch (resourceType) {
       case "node":
@@ -141,7 +142,7 @@ export class EventProcessor extends EventEmitter {
   }
 
   private processNodeEvent(event: WatchEvent): void {
-    const node = this.kubernetesService["transformNode"](event.object);
+    const node = this.kubernetesService["transformNode"](event.object as never);
 
     switch (event.type) {
       case "ADDED":
@@ -157,7 +158,7 @@ export class EventProcessor extends EventEmitter {
   }
 
   private processPodEvent(event: WatchEvent): void {
-    const pod = this.kubernetesService["transformPod"](event.object);
+    const pod = this.kubernetesService["transformPod"](event.object as never);
 
     switch (event.type) {
       case "ADDED":
@@ -173,7 +174,7 @@ export class EventProcessor extends EventEmitter {
   }
 
   private processNamespaceEvent(event: WatchEvent): void {
-    const namespace = this.kubernetesService["transformNamespace"](event.object);
+    const namespace = this.kubernetesService["transformNamespace"](event.object as never);
 
     switch (event.type) {
       case "ADDED":
@@ -188,13 +189,13 @@ export class EventProcessor extends EventEmitter {
     }
   }
 
-  private broadcastNodeEvent(action: string, node: any): void {
-    const message = WebSocketMessageFactory.createNodeEventMessage(action as any, node);
+  private broadcastNodeEvent(action: string, node: KubernetesNode | Partial<KubernetesNode>): void {
+    const message = WebSocketMessageFactory.createNodeEventMessage(action as EventType, node);
     this.webSocketManager.broadcast(message);
   }
 
-  private broadcastPodEvent(action: string, pod: any): void {
-    const message = WebSocketMessageFactory.createPodEventMessage(action as any, pod);
+  private broadcastPodEvent(action: string, pod: Pod): void {
+    const message = WebSocketMessageFactory.createPodEventMessage(action as EventType, pod);
 
     // If pod has namespace, only broadcast to clients interested in that namespace
     if (pod.namespace) {
@@ -204,7 +205,7 @@ export class EventProcessor extends EventEmitter {
     }
   }
 
-  private broadcastNamespaceEvent(action: string, namespace: any): void {
+  private broadcastNamespaceEvent(action: string, namespace: Namespace | Partial<Namespace>): void {
     const message = {
       type: "namespace_event",
       action,
@@ -214,7 +215,14 @@ export class EventProcessor extends EventEmitter {
     this.webSocketManager.broadcast(message);
   }
 
-  private broadcastMetrics(metrics: any): void {
+  private broadcastMetrics(metrics: {
+    totalNodes: number;
+    readyNodes: number;
+    totalPods: number;
+    runningPods: number;
+    pendingPods: number;
+    failedPods: number;
+  }): void {
     const message = {
       type: "metrics",
       data: metrics,

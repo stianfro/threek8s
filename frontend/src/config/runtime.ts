@@ -6,12 +6,22 @@
 export interface RuntimeConfig {
   apiUrl: string;
   wsUrl: string;
+  authEnabled: boolean;
+  oidcAuthority?: string;
+  oidcClientId?: string;
+  oidcRedirectUri?: string;
+  oidcScope?: string;
 }
 
 // Default configuration for development
 const defaultConfig: RuntimeConfig = {
   apiUrl: import.meta.env.VITE_API_URL || "http://localhost:3001/api",
   wsUrl: import.meta.env.VITE_WS_URL || "ws://localhost:3001/ws",
+  authEnabled: import.meta.env.VITE_AUTH_ENABLED === "true",
+  oidcAuthority: import.meta.env.VITE_OIDC_AUTHORITY || "",
+  oidcClientId: import.meta.env.VITE_OIDC_CLIENT_ID || "",
+  oidcRedirectUri: import.meta.env.VITE_OIDC_REDIRECT_URI || `${window.location.origin}/callback`,
+  oidcScope: import.meta.env.VITE_OIDC_SCOPE || "openid profile email",
 };
 
 let runtimeConfig: RuntimeConfig | null = null;
@@ -53,6 +63,11 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         runtimeConfig = {
           apiUrl: configObj.apiUrl || defaultConfig.apiUrl,
           wsUrl: configObj.wsUrl || defaultConfig.wsUrl,
+          authEnabled: configObj.authEnabled === true,
+          oidcAuthority: configObj.oidcAuthority || defaultConfig.oidcAuthority,
+          oidcClientId: configObj.oidcClientId || defaultConfig.oidcClientId,
+          oidcRedirectUri: configObj.oidcRedirectUri || defaultConfig.oidcRedirectUri,
+          oidcScope: configObj.oidcScope || defaultConfig.oidcScope,
         };
         console.log("Loaded runtime configuration:", runtimeConfig);
       } catch (e) {

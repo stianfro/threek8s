@@ -8,21 +8,48 @@ import type {
 
 export class ApiService {
   private baseUrl: string;
+  private getAccessToken: (() => string | null) | null = null;
 
   constructor(baseUrl: string = "http://localhost:3001/api") {
     this.baseUrl = baseUrl;
   }
 
+  /**
+   * Set function to retrieve access token
+   * Called before each API request to get fresh token
+   */
+  setAccessTokenProvider(getToken: () => string | null): void {
+    this.getAccessToken = getToken;
+  }
+
   private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+
+    // Build headers with optional Authorization
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    // Add existing headers
+    if (options?.headers) {
+      const existingHeaders = new Headers(options.headers);
+      existingHeaders.forEach((value, key) => {
+        headers[key] = value;
+      });
+    }
+
+    // Add Authorization header if token is available
+    if (this.getAccessToken) {
+      const token = this.getAccessToken();
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+    }
 
     try {
       const response = await fetch(url, {
         ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-        },
+        headers,
       });
 
       if (!response.ok) {

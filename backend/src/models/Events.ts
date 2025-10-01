@@ -4,7 +4,7 @@
 
 export type EventType = "ADDED" | "MODIFIED" | "DELETED" | "ERROR";
 
-export interface WatchEvent<T = any> {
+export interface WatchEvent<T = unknown> {
   type: EventType;
   object: T;
   timestamp: Date;
@@ -12,7 +12,7 @@ export interface WatchEvent<T = any> {
 
 export interface WebSocketMessage {
   type: string;
-  data?: any;
+  data?: unknown;
   timestamp: string;
   error?: {
     code: string;
@@ -33,28 +33,28 @@ export interface ConnectionMessage extends WebSocketMessage {
 export interface InitialStateMessage extends WebSocketMessage {
   type: "initial_state";
   data: {
-    nodes: any[];
-    pods: any[];
-    namespaces: any[];
+    nodes: unknown[];
+    pods: unknown[];
+    namespaces: unknown[];
   };
 }
 
 export interface NodeEventMessage extends WebSocketMessage {
   type: "node_event";
   action: EventType;
-  data: any;
+  data: unknown;
 }
 
 export interface PodEventMessage extends WebSocketMessage {
   type: "pod_event";
   action: EventType;
-  data: any;
+  data: unknown;
 }
 
 export interface NamespaceEventMessage extends WebSocketMessage {
   type: "namespace_event";
   action: EventType;
-  data: any;
+  data: unknown;
 }
 
 export interface MetricsMessage extends WebSocketMessage {
@@ -106,9 +106,9 @@ export class WebSocketMessageFactory {
   }
 
   static createInitialStateMessage(data: {
-    nodes: any[];
-    pods: any[];
-    namespaces: any[];
+    nodes: unknown[];
+    pods: unknown[];
+    namespaces: unknown[];
   }): InitialStateMessage {
     return {
       type: "initial_state",
@@ -117,7 +117,7 @@ export class WebSocketMessageFactory {
     };
   }
 
-  static createNodeEventMessage(action: EventType, data: any): NodeEventMessage {
+  static createNodeEventMessage(action: EventType, data: unknown): NodeEventMessage {
     return {
       type: "node_event",
       action,
@@ -126,7 +126,7 @@ export class WebSocketMessageFactory {
     };
   }
 
-  static createPodEventMessage(action: EventType, data: any): PodEventMessage {
+  static createPodEventMessage(action: EventType, data: unknown): PodEventMessage {
     return {
       type: "pod_event",
       action,

@@ -1,4 +1,13 @@
-import { KubeConfig, CoreV1Api, VersionApi, Watch } from "@kubernetes/client-node";
+import {
+  KubeConfig,
+  CoreV1Api,
+  VersionApi,
+  Watch,
+  V1Node,
+  V1Pod,
+  V1Namespace,
+  VersionInfo,
+} from "@kubernetes/client-node";
 import { KubernetesNode } from "../models/KubernetesNode";
 import { Pod } from "../models/Pod";
 import { Namespace } from "../models/Namespace";
@@ -78,9 +87,9 @@ export class KubernetesService extends EventEmitter {
   async connect(): Promise<void> {
     try {
       // Test connection by getting version
-      const version = await this.versionApi.getCode();
+      const response = await this.versionApi.getCode();
       this.connected = true;
-      const versionData = (version as any).body || version;
+      const versionData = (response as { body?: VersionInfo }).body || (response as VersionInfo);
       this.emit("connected", {
         version: versionData.gitVersion,
         platform: versionData.platform,
@@ -92,8 +101,8 @@ export class KubernetesService extends EventEmitter {
   }
 
   async getClusterInfo() {
-    const version = await this.versionApi.getCode();
-    const versionData = (version as any).body || version;
+    const response = await this.versionApi.getCode();
+    const versionData = (response as { body?: VersionInfo }).body || (response as VersionInfo);
     const currentContext = this.kubeConfig.getCurrentContext();
     const cluster = this.kubeConfig.getCurrentCluster();
 
@@ -108,25 +117,29 @@ export class KubernetesService extends EventEmitter {
 
   async getNodes(): Promise<KubernetesNode[]> {
     const response = await this.coreApi.listNode();
-    const nodes = (response as any).body || response;
-    return nodes.items.map((node: any) => this.transformNode(node));
+    const nodes =
+      (response as { body?: { items: V1Node[] } }).body || (response as { items: V1Node[] });
+    return nodes.items.map((node) => this.transformNode(node));
   }
 
   async getPods(namespace?: string): Promise<Pod[]> {
     let response;
     if (namespace) {
-      response = await this.coreApi.listNamespacedPod({ namespace } as any);
+      response = await this.coreApi.listNamespacedPod({ namespace });
     } else {
       response = await this.coreApi.listPodForAllNamespaces();
     }
-    const pods = (response as any).body || response;
-    return pods.items.map((pod: any) => this.transformPod(pod));
+    const pods =
+      (response as { body?: { items: V1Pod[] } }).body || (response as { items: V1Pod[] });
+    return pods.items.map((pod) => this.transformPod(pod));
   }
 
   async getNamespaces(): Promise<Namespace[]> {
     const response = await this.coreApi.listNamespace();
-    const nsData = (response as any).body || response;
-    const namespaces = nsData.items.map((ns: any) => this.transformNamespace(ns));
+    const nsData =
+      (response as { body?: { items: V1Namespace[] } }).body ||
+      (response as { items: V1Namespace[] });
+    const namespaces = nsData.items.map((ns) => this.transformNamespace(ns));
 
     // Count pods per namespace
     const pods = await this.getPods();
@@ -136,16 +149,16 @@ export class KubernetesService extends EventEmitter {
       podCounts.set(pod.namespace, count + 1);
     });
 
-    namespaces.forEach((ns: any) => {
+    namespaces.forEach((ns) => {
       ns.podCount = podCounts.get(ns.name) || 0;
     });
 
     return namespaces;
   }
 
-  private transformNode(node: any): KubernetesNode {
+  private transformNode(node: V1Node): KubernetesNode {
     const conditions = node.status?.conditions || [];
-    const readyCondition = conditions.find((c: any) => c.type === "Ready");
+    const readyCondition = conditions.find((c) => c.type === "Ready");
     const role =
       node.metadata?.labels?.["node-role.kubernetes.io/master"] !== undefined
         ? "master"
@@ -174,20 +187,20 @@ export class KubernetesService extends EventEmitter {
         pods: node.status?.allocatable?.pods || "0",
         storage: node.status?.allocatable?.["ephemeral-storage"] || "0",
       },
-      conditions: conditions.map((c: any) => ({
-        type: c.type,
-        status: c.status,
-        lastTransitionTime: new Date(c.lastTransitionTime),
+      conditions: conditions.map((c) => ({
+        type: c.type || "",
+        status: (c.status as "True" | "False" | "Unknown") || "Unknown",
+        lastTransitionTime: new Date(c.lastTransitionTime || ""),
         reason: c.reason || "",
         message: c.message || "",
       })),
       labels,
-      creationTimestamp: new Date(node.metadata?.creationTimestamp),
+      creationTimestamp: new Date(node.metadata?.creationTimestamp || ""),
       zone,
     };
   }
 
-  private transformPod(pod: any): Pod {
+  private transformPod(pod: V1Pod): Pod {
     const phase = pod.status?.phase || "Unknown";
     const containers = pod.spec?.containers || [];
     const containerStatuses = pod.status?.containerStatuses || [];
@@ -199,11 +212,11 @@ export class KubernetesService extends EventEmitter {
       nodeName: pod.spec?.nodeName || "",
       status: pod.status?.reason || phase,
       phase: phase as Pod["phase"],
-      containers: containers.map((container: any, index: number) => {
+      containers: containers.map((container, index) => {
         const status = containerStatuses[index];
         return {
-          name: container.name,
-          image: container.image,
+          name: container.name || "",
+          image: container.image || "",
           ready: status?.ready || false,
           state: status?.state?.running
             ? "running"
@@ -216,14 +229,14 @@ export class KubernetesService extends EventEmitter {
       }),
       labels: pod.metadata?.labels || {},
       annotations: pod.metadata?.annotations || {},
-      creationTimestamp: new Date(pod.metadata?.creationTimestamp),
+      creationTimestamp: new Date(pod.metadata?.creationTimestamp || ""),
       deletionTimestamp: pod.metadata?.deletionTimestamp
         ? new Date(pod.metadata.deletionTimestamp)
         : undefined,
     };
   }
 
-  private transformNamespace(namespace: any): Namespace {
+  private transformNamespace(namespace: V1Namespace): Namespace {
     return {
       name: namespace.metadata?.name || "",
       uid: namespace.metadata?.uid || "",
@@ -231,7 +244,7 @@ export class KubernetesService extends EventEmitter {
       podCount: 0, // Will be updated separately
       labels: namespace.metadata?.labels || {},
       annotations: namespace.metadata?.annotations || {},
-      creationTimestamp: new Date(namespace.metadata?.creationTimestamp),
+      creationTimestamp: new Date(namespace.metadata?.creationTimestamp || ""),
     };
   }
 

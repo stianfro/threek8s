@@ -205,6 +205,21 @@ subjects:
     apiGroup: rbac.authorization.k8s.io
 ```
 
+## 🔐 Authentication (Optional)
+
+ThreeK8s supports optional OIDC (OpenID Connect) authentication. When enabled, users must authenticate before accessing the visualization.
+
+### Overview
+
+- **Optional**: Authentication can be enabled or disabled via environment variables
+- **OIDC Standard**: Works with any OIDC-compliant provider (Microsoft Entra ID, Google, Okta, Auth0, etc.)
+- **Secure**: JWT token validation, automatic token refresh, WebSocket authentication
+- **Production-Ready**: Includes Helm chart configuration and deployment examples
+
+### Quick Start
+
+Authentication is **disabled by default**. To enable it, configure both backend and frontend with your OIDC provider details.
+
 ## ⚙️ Configuration
 
 ### Backend Configuration (`backend/.env`)
@@ -234,6 +249,147 @@ NODE_ENV=development                # development or production
 VITE_API_URL=http://localhost:3001/api  # Backend API URL
 VITE_WS_URL=ws://localhost:3001/ws      # WebSocket URL
 ```
+
+### Setting Up Authentication
+
+#### Microsoft Entra ID Setup
+
+1. **Register a new application** in Azure Portal:
+   - Navigate to Azure Active Directory → App registrations → New registration
+   - Name: `threek8s` (or your preferred name)
+   - Supported account types: Choose based on your organization's needs
+   - Redirect URI:
+     - Type: Single-page application (SPA)
+     - URI: `http://localhost:5173/callback` (development) or `https://your-domain.com/callback` (production)
+   - Click **Register**
+
+2. **Note your application details**:
+   - **Application (client) ID**: Found on the Overview page
+   - **Directory (tenant) ID**: Found on the Overview page
+
+3. **Expose an API scope**:
+   - Go to Expose an API
+   - Click **Add a scope**
+   - Accept the default Application ID URI: `api://{client-id}` or set a custom one
+   - Scope name: `access_as_user`
+   - Who can consent: **Admins and users**
+   - Admin consent display name: `Access threek8s API`
+   - Admin consent description: `Allow the application to access threek8s API on behalf of the signed-in user`
+   - User consent display name: `Access threek8s API`
+   - User consent description: `Allow the application to access threek8s API on your behalf`
+   - State: **Enabled**
+   - Click **Add scope**
+
+4. **Configure backend** (`backend/.env`):
+   ```env
+   AUTH_ENABLED=true
+   OIDC_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
+   OIDC_AUDIENCE={client-id}
+   OIDC_JWKS_URI=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
+   ```
+
+5. **Configure frontend** (`frontend/.env`):
+   ```env
+   VITE_AUTH_ENABLED=true
+   VITE_OIDC_AUTHORITY=https://login.microsoftonline.com/{tenant-id}/v2.0
+   VITE_OIDC_CLIENT_ID={client-id}
+   VITE_OIDC_REDIRECT_URI=http://localhost:5173/callback
+   VITE_OIDC_SCOPE=api://{client-id}/access_as_user openid profile
+   ```
+
+6. **Replace placeholders**:
+   - `{tenant-id}`: Your Directory (tenant) ID from step 2
+   - `{client-id}`: Your Application (client) ID from step 2
+
+#### Enabling/Disabling Authentication
+
+**Development (No Auth)**:
+```bash
+# backend/.env
+AUTH_ENABLED=false
+
+# frontend/.env
+VITE_AUTH_ENABLED=false
+```
+
+**Production (With Auth)**:
+```bash
+# backend/.env
+AUTH_ENABLED=true
+OIDC_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
+OIDC_AUDIENCE={client-id}
+OIDC_JWKS_URI=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
+
+# frontend/.env
+VITE_AUTH_ENABLED=true
+VITE_OIDC_AUTHORITY=https://login.microsoftonline.com/{tenant-id}/v2.0
+VITE_OIDC_CLIENT_ID={client-id}
+VITE_OIDC_REDIRECT_URI=https://your-domain.com/callback
+VITE_OIDC_SCOPE=api://{client-id}/access_as_user openid profile
+```
+
+#### Helm Deployment with Authentication
+
+Create a values override file:
+
+```yaml
+# values-auth.yaml
+auth:
+  enabled: true
+  oidc:
+    issuer: "https://login.microsoftonline.com/{tenant-id}/v2.0"
+    audience: "{client-id}"
+    jwksUri: "https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys"
+    clientId: "{client-id}"
+    redirectUri: "https://your-domain.com/callback"
+    scope: "api://{client-id}/access_as_user openid profile"
+```
+
+Deploy with auth enabled:
+
+```bash
+helm install threek8s oci://ghcr.io/stianfro/threek8s/chart \
+  --version 1.3.0 \
+  -f values-auth.yaml
+```
+
+#### Docker Compose with Authentication
+
+Edit `docker-compose.yml` and uncomment the auth environment variables:
+
+```yaml
+backend:
+  environment:
+    - AUTH_ENABLED=true
+    - OIDC_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
+    - OIDC_AUDIENCE={client-id}
+    - OIDC_JWKS_URI=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
+
+frontend:
+  environment:
+    - VITE_AUTH_ENABLED=true
+    - VITE_OIDC_AUTHORITY=https://login.microsoftonline.com/{tenant-id}/v2.0
+    - VITE_OIDC_CLIENT_ID={client-id}
+    - VITE_OIDC_REDIRECT_URI=http://localhost:3000/callback
+    - VITE_OIDC_SCOPE=openid profile email
+```
+
+#### Troubleshooting Authentication
+
+**"Authentication failed" error**:
+- Verify your client ID and tenant ID are correct
+- Check that the redirect URI matches exactly (including protocol and trailing slashes)
+- Ensure the application is registered as a SPA (Single-page application) in Azure
+
+**Token validation errors**:
+- Verify OIDC_ISSUER matches your tenant configuration
+- Check that OIDC_JWKS_URI is accessible from your backend
+- Ensure the clock on your server is synchronized
+
+**WebSocket authentication fails**:
+- WebSocket connections pass the token as a query parameter
+- Check browser console for token expiration messages
+- Tokens are automatically refreshed; check for silent renewal errors
 
 ## 🎮 Usage Guide
 

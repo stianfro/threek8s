@@ -1,4 +1,12 @@
-import type { WebSocketMessage, StateUpdate, EventMessage } from "../types/kubernetes";
+import type {
+  WebSocketMessage,
+  StateUpdate,
+  EventMessage,
+  KubernetesNode,
+  Pod,
+  Namespace,
+  ClusterMetrics,
+} from "../types/kubernetes";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
@@ -19,6 +27,7 @@ export class WebSocketService {
   private heartbeatTimer: number | null = null;
   private reconnectTimer: number | null = null;
   private isManualClose: boolean = false;
+  private getAccessToken: (() => string | null) | null = null;
 
   private onStateUpdateCallback?: (state: StateUpdate) => void;
   private onEventCallback?: (event: EventMessage) => void;
@@ -32,6 +41,14 @@ export class WebSocketService {
     this.heartbeatInterval = options.heartbeatInterval || 30000;
   }
 
+  /**
+   * Set function to retrieve access token
+   * Token is added to WebSocket URL as query parameter
+   */
+  setAccessTokenProvider(getToken: () => string | null): void {
+    this.getAccessToken = getToken;
+  }
+
   public connect(): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       console.log("WebSocket already connected");
@@ -42,7 +59,17 @@ export class WebSocketService {
     this.updateStatus("connecting");
 
     try {
-      this.ws = new WebSocket(this.url);
+      // Build WebSocket URL with optional token
+      let wsUrl = this.url;
+      if (this.getAccessToken) {
+        const token = this.getAccessToken();
+        if (token) {
+          const separator = this.url.includes("?") ? "&" : "?";
+          wsUrl = `${this.url}${separator}token=${encodeURIComponent(token)}`;
+        }
+      }
+
+      this.ws = new WebSocket(wsUrl);
       this.setupEventHandlers();
     } catch (error) {
       console.error("Failed to create WebSocket:", error);
@@ -109,8 +136,9 @@ export class WebSocketService {
         if (this.onEventCallback) {
           const nodeEvent: EventMessage = {
             eventType: "node",
-            action: (message.action?.toLowerCase() as any) || "modified",
-            resource: message.data,
+            action:
+              (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified",
+            resource: message.data as KubernetesNode,
           };
           this.onEventCallback(nodeEvent);
         }
@@ -119,12 +147,13 @@ export class WebSocketService {
       case "pod_event":
         if (this.onEventCallback) {
           // Convert backend action format (ADDED, MODIFIED, DELETED) to frontend format
-          const action = (message.action?.toLowerCase() as any) || "modified";
+          const action =
+            (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified";
           console.log("[WebSocket] Pod event:", action, message.data);
           const podEvent: EventMessage = {
             eventType: "pod",
             action: action,
-            resource: message.data,
+            resource: message.data as Pod,
           };
           this.onEventCallback(podEvent);
         }
@@ -134,8 +163,9 @@ export class WebSocketService {
         if (this.onEventCallback) {
           const namespaceEvent: EventMessage = {
             eventType: "namespace",
-            action: (message.action?.toLowerCase() as any) || "modified",
-            resource: message.data,
+            action:
+              (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified",
+            resource: message.data as Namespace,
           };
           this.onEventCallback(namespaceEvent);
         }
@@ -144,7 +174,7 @@ export class WebSocketService {
       case "metrics":
         // Handle metrics updates as state updates
         if (this.onStateUpdateCallback) {
-          this.onStateUpdateCallback({ metrics: message.data });
+          this.onStateUpdateCallback({ metrics: message.data as ClusterMetrics });
         }
         break;
 
@@ -157,7 +187,9 @@ export class WebSocketService {
 
       case "error":
         console.error("Server error:", message.data);
-        this.handleError(new Error(message.data?.message || "Server error"));
+        this.handleError(
+          new Error((message.data as { message?: string })?.message || "Server error"),
+        );
         break;
 
       default:

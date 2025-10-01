@@ -1,7 +1,9 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer, WebSocket, RawData } from "ws";
 import { EventEmitter } from "events";
 import { Server } from "http";
+import { IncomingMessage } from "http";
 import { WebSocketMessage, WebSocketMessageFactory } from "../models/Events";
+import { TokenValidator } from "./TokenValidator";
 
 interface Client {
   id: string;
@@ -9,6 +11,7 @@ interface Client {
   isAlive: boolean;
   namespaceFilter?: string[];
   lastActivity: Date;
+  authenticated: boolean;
 }
 
 export class WebSocketManager extends EventEmitter {
@@ -17,16 +20,19 @@ export class WebSocketManager extends EventEmitter {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private heartbeatIntervalMs: number;
   private heartbeatTimeoutMs: number; // Keeping for potential future use
+  private tokenValidator: TokenValidator | null;
 
   constructor(
     server: Server,
     heartbeatIntervalMs: number = 30000,
     heartbeatTimeoutMs: number = 10000,
+    tokenValidator: TokenValidator | null = null,
   ) {
     super();
     this.clients = new Map();
     this.heartbeatIntervalMs = heartbeatIntervalMs;
     this.heartbeatTimeoutMs = heartbeatTimeoutMs;
+    this.tokenValidator = tokenValidator;
 
     this.wss = new WebSocketServer({
       server,
@@ -39,8 +45,17 @@ export class WebSocketManager extends EventEmitter {
   }
 
   private setupWebSocketServer(): void {
-    this.wss.on("connection", (ws: WebSocket, request) => {
+    this.wss.on("connection", async (ws: WebSocket, request: IncomingMessage) => {
       const clientId = this.generateClientId();
+
+      // Check authentication if enabled
+      const authResult = await this.authenticateConnection(request);
+      if (!authResult.authenticated) {
+        console.log(`Client ${clientId} authentication failed: ${authResult.error}`);
+        ws.close(1008, `Authentication failed: ${authResult.error}`);
+        return;
+      }
+
       const namespaceFilter = this.parseNamespaceFilter(request.url);
 
       const client: Client = {
@@ -49,6 +64,7 @@ export class WebSocketManager extends EventEmitter {
         isAlive: true,
         namespaceFilter,
         lastActivity: new Date(),
+        authenticated: authResult.authenticated,
       };
 
       this.clients.set(clientId, client);
@@ -83,6 +99,45 @@ export class WebSocketManager extends EventEmitter {
     return `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  /**
+   * Authenticate WebSocket connection
+   * Checks for token in query parameter or Authorization header
+   */
+  private async authenticateConnection(
+    request: IncomingMessage,
+  ): Promise<{ authenticated: boolean; error?: string }> {
+    // If auth is not enabled, allow all connections
+    if (!this.tokenValidator || !this.tokenValidator.isAuthEnabled()) {
+      return { authenticated: true };
+    }
+
+    try {
+      // Try to get token from query parameter
+      const url = request.url || "";
+      const params = new URLSearchParams(url.split("?")[1] || "");
+      let token = params.get("token");
+
+      // If not in query, try Authorization header
+      if (!token) {
+        const authHeader = request.headers["authorization"];
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          token = authHeader.substring(7);
+        }
+      }
+
+      if (!token) {
+        return { authenticated: false, error: "No token provided" };
+      }
+
+      // Validate token
+      await this.tokenValidator.validateToken(token);
+      return { authenticated: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { authenticated: false, error: errorMessage };
+    }
+  }
+
   private parseNamespaceFilter(url?: string): string[] | undefined {
     if (!url) return undefined;
 
@@ -96,7 +151,7 @@ export class WebSocketManager extends EventEmitter {
     return undefined;
   }
 
-  private handleClientMessage(clientId: string, data: any): void {
+  private handleClientMessage(clientId: string, data: RawData): void {
     const client = this.clients.get(clientId);
     if (!client) return;
 

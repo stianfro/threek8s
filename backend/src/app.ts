@@ -6,10 +6,13 @@ import { createNodesRouter } from "./api/routes/nodes";
 import { createPodsRouter } from "./api/routes/pods";
 import { KubernetesService } from "./services/KubernetesService";
 import { StateManager } from "./services/StateManager";
+import { OidcConfig } from "./config/oidc";
+import { createAuthMiddleware, authErrorHandler } from "./middleware/auth";
 
 export function createApp(
   kubernetesService: KubernetesService,
   stateManager: StateManager,
+  oidcConfig: OidcConfig,
 ): Express {
   const app = express();
 
@@ -56,15 +59,25 @@ export function createApp(
     }
   });
 
+  // Create auth middleware
+  const authMiddleware = createAuthMiddleware(oidcConfig);
+
   // API routes
   const apiRouter = express.Router();
 
+  // Health endpoint is always public (no auth required)
   apiRouter.use(createHealthRouter(kubernetesService, stateManager));
+
+  // Protected routes (when auth is enabled)
+  apiRouter.use(authMiddleware);
   apiRouter.use(createClusterRouter(kubernetesService, stateManager));
   apiRouter.use(createNodesRouter(stateManager));
   apiRouter.use(createPodsRouter(stateManager));
 
   app.use("/api", apiRouter);
+
+  // Auth error handler (must come after routes)
+  app.use(authErrorHandler);
 
   // Root route
   app.get("/", (req: Request, res: Response) => {

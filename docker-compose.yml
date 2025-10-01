@@ -10,6 +10,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=8080
+      # Authentication - disabled by default, uncomment to enable
+      # - AUTH_ENABLED=true
+      # - OIDC_ISSUER=https://login.microsoftonline.com/{tenant-id}/v2.0
+      # - OIDC_AUDIENCE={client-id}
+      # - OIDC_JWKS_URI=https://login.microsoftonline.com/{tenant-id}/discovery/v2.0/keys
     volumes:
       - ~/.kube:/root/.kube:ro
     env_file:
@@ -33,6 +38,12 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8080
       - VITE_WS_URL=ws://localhost:8080
+      # Authentication - disabled by default, uncomment to enable
+      # - VITE_AUTH_ENABLED=true
+      # - VITE_OIDC_AUTHORITY=https://login.microsoftonline.com/{tenant-id}/v2.0
+      # - VITE_OIDC_CLIENT_ID={client-id}
+      # - VITE_OIDC_REDIRECT_URI=http://localhost:3000/callback
+      # - VITE_OIDC_SCOPE=openid profile email
     depends_on:
       - backend
     networks:
