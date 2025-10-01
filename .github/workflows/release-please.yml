@@ -11,6 +11,7 @@ permissions:
   pull-requests: write
   packages: write
   id-token: write
+  security-events: write
 
 jobs:
   release-please:
