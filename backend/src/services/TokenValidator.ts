@@ -64,16 +64,37 @@ export class TokenValidator {
         token,
         key,
         {
-          audience: this.config.audience,
           issuer: this.config.issuer,
           algorithms: ["RS256"],
+          // Skip audience validation in jwt.verify, we'll do it manually
+          // to support both aud and appid claims
         },
         (err, decoded) => {
           if (err) {
             reject(new Error(`Token validation failed: ${err.message}`));
-          } else {
-            resolve(decoded);
+            return;
           }
+
+          // Manual audience validation for Entra ID tokens
+          if (decoded && typeof decoded === "object") {
+            const payload = decoded as any;
+            const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+            const appid = payload.appid;
+
+            // Check if audience matches our client ID
+            const audienceValid = aud.includes(this.config.audience) || appid === this.config.audience;
+
+            if (!audienceValid) {
+              reject(
+                new Error(
+                  `Token audience validation failed. Expected: ${this.config.audience}, Got aud: ${aud.join(", ")}, appid: ${appid}`,
+                ),
+              );
+              return;
+            }
+          }
+
+          resolve(decoded);
         },
       );
     });

@@ -50,13 +50,48 @@ export function createAuthMiddleware(config: OidcConfig) {
   };
 
   // Create express-jwt middleware
-  return expressjwt({
+  // Note: For Microsoft Entra ID SPAs, the audience might be Microsoft Graph
+  // but the appid claim contains our application ID. We validate manually.
+  const middleware = expressjwt({
     secret: getKey,
-    audience: config.audience,
     issuer: config.issuer,
     algorithms: ["RS256"],
     requestProperty: "auth",
+    // Skip audience validation - we'll do it manually for Entra ID compatibility
+    credentialsRequired: true,
   });
+
+  // Wrap middleware to add custom audience validation
+  return (req: Request, res: Response, next: NextFunction) => {
+    middleware(req, res, (err) => {
+      if (err) {
+        return next(err);
+      }
+
+      // Manual audience validation for Entra ID tokens
+      const auth = (req as any).auth;
+      if (auth) {
+        const aud = Array.isArray(auth.aud) ? auth.aud : [auth.aud];
+        const appid = auth.appid;
+
+        // Check if audience or appid matches our client ID
+        const audienceValid = aud.includes(config.audience) || appid === config.audience;
+
+        if (!audienceValid) {
+          return res.status(401).json({
+            error: "UNAUTHORIZED",
+            message: "Invalid token audience",
+            details:
+              process.env.NODE_ENV === "development"
+                ? `Expected: ${config.audience}, Got aud: ${aud.join(", ")}, appid: ${appid}`
+                : undefined,
+          });
+        }
+      }
+
+      next();
+    });
+  };
 }
 
 /**
