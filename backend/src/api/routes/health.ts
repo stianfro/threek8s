@@ -17,8 +17,8 @@ export function createHealthRouter(
         status: isConnected ? "healthy" : "degraded",
         cluster: {
           connected: isConnected,
-          name: isConnected ? "cluster" : null,
-          version: null,
+          name: isConnected ? "cluster" : (null as string | null),
+          version: null as string | null,
         },
         metrics: {
           nodes: metrics.totalNodes,

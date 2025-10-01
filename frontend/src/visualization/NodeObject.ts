@@ -128,38 +128,18 @@ export class NodeObject extends THREE.Group {
       capacity: {
         cpu: node.capacity?.cpu || "N/A",
         memory: node.capacity?.memory || "N/A",
+        pods: node.capacity?.pods || "110",
       },
       allocatable: {
         cpu: node.allocatable?.cpu || "N/A",
         memory: node.allocatable?.memory || "N/A",
+        pods: node.allocatable?.pods || "110",
       },
       podCount: podCount,
-      maxPods: parseInt(node.capacity?.pods || "110"),
-      os: node.operatingSystem || "linux",
-      kernelVersion: node.architecture || "N/A",
-      kubeletVersion: node.kubeletVersion || "N/A",
-      containerRuntime: node.containerRuntimeVersion || "N/A",
-      age: this.formatAge(node.creationTimestamp),
+      zone: node.zone || "N/A",
     };
   }
 
-  private formatAge(timestamp?: string): string {
-    if (!timestamp) return "N/A";
-    const created = new Date(timestamp);
-    const now = new Date();
-    const diff = now.getTime() - created.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-    if (days > 0) {
-      return `${days}d ${hours}h`;
-    } else if (hours > 0) {
-      return `${hours}h`;
-    } else {
-      const minutes = Math.floor(diff / (1000 * 60));
-      return `${minutes}m`;
-    }
-  }
 
   public animate(deltaTime: number): void {
     if (this.selected) {

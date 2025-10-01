@@ -189,7 +189,7 @@ export class KubernetesService extends EventEmitter {
       },
       conditions: conditions.map((c) => ({
         type: c.type || "",
-        status: c.status || "",
+        status: (c.status as "True" | "False" | "Unknown") || "Unknown",
         lastTransitionTime: new Date(c.lastTransitionTime || ""),
         reason: c.reason || "",
         message: c.message || "",

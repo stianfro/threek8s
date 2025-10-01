@@ -1,15 +1,14 @@
 import { Watch, KubeConfig, CoreV1Api } from "@kubernetes/client-node";
 import { EventEmitter } from "events";
 import { WatchEvent, EventType } from "../models/Events";
-import { IncomingMessage } from "http";
 
 export class WatchManager extends EventEmitter {
   private watch: Watch;
   private kubeConfig: KubeConfig;
   private coreApi: CoreV1Api;
-  private nodeWatchRequest: IncomingMessage | null = null;
-  private podWatchRequest: IncomingMessage | null = null;
-  private namespaceWatchRequest: IncomingMessage | null = null;
+  private nodeWatchRequest: AbortController | null = null;
+  private podWatchRequest: AbortController | null = null;
+  private namespaceWatchRequest: AbortController | null = null;
   private isWatching: boolean = false;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private reconnectAttempts: number = 0;

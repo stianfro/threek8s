@@ -1,4 +1,12 @@
-import type { WebSocketMessage, StateUpdate, EventMessage } from "../types/kubernetes";
+import type {
+  WebSocketMessage,
+  StateUpdate,
+  EventMessage,
+  KubernetesNode,
+  Pod,
+  Namespace,
+  ClusterMetrics,
+} from "../types/kubernetes";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
@@ -130,7 +138,7 @@ export class WebSocketService {
             eventType: "node",
             action:
               (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified",
-            resource: message.data,
+            resource: message.data as KubernetesNode,
           };
           this.onEventCallback(nodeEvent);
         }
@@ -145,7 +153,7 @@ export class WebSocketService {
           const podEvent: EventMessage = {
             eventType: "pod",
             action: action,
-            resource: message.data,
+            resource: message.data as Pod,
           };
           this.onEventCallback(podEvent);
         }
@@ -157,7 +165,7 @@ export class WebSocketService {
             eventType: "namespace",
             action:
               (message.action?.toLowerCase() as "added" | "modified" | "deleted") || "modified",
-            resource: message.data,
+            resource: message.data as Namespace,
           };
           this.onEventCallback(namespaceEvent);
         }
@@ -166,7 +174,7 @@ export class WebSocketService {
       case "metrics":
         // Handle metrics updates as state updates
         if (this.onStateUpdateCallback) {
-          this.onStateUpdateCallback({ metrics: message.data });
+          this.onStateUpdateCallback({ metrics: message.data as ClusterMetrics });
         }
         break;
 
@@ -179,7 +187,9 @@ export class WebSocketService {
 
       case "error":
         console.error("Server error:", message.data);
-        this.handleError(new Error(message.data?.message || "Server error"));
+        this.handleError(
+          new Error((message.data as { message?: string })?.message || "Server error"),
+        );
         break;
 
       default:
