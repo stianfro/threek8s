@@ -59,17 +59,18 @@ export class WebSocketService {
     this.updateStatus("connecting");
 
     try {
-      // Build WebSocket URL with optional token
-      let wsUrl = this.url;
-      if (this.getAccessToken) {
-        const token = this.getAccessToken();
-        if (token) {
-          const separator = this.url.includes("?") ? "&" : "?";
-          wsUrl = `${this.url}${separator}token=${encodeURIComponent(token)}`;
-        }
+      const token = this.getAccessToken?.();
+
+      if (token) {
+        // Pass token as WebSocket subprotocol (not in URL)
+        // Format: ["access_token", base64url-encoded-token]
+        // eslint-disable-next-line no-undef
+        const encodedToken = btoa(token).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+        this.ws = new WebSocket(this.url, ["access_token", encodedToken]);
+      } else {
+        this.ws = new WebSocket(this.url);
       }
 
-      this.ws = new WebSocket(wsUrl);
       this.setupEventHandlers();
     } catch (error) {
       console.error("Failed to create WebSocket:", error);

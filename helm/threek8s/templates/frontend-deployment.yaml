@@ -55,13 +55,25 @@ spec:
             - name: VITE_AUTH_ENABLED
               value: "true"
             - name: VITE_OIDC_AUTHORITY
-              value: {{ .Values.auth.oidc.issuer | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "threek8s.fullname" . }}-oidc
+                  key: oidc-issuer
             - name: VITE_OIDC_CLIENT_ID
-              value: {{ .Values.auth.oidc.clientId | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "threek8s.fullname" . }}-oidc
+                  key: oidc-client-id
             - name: VITE_OIDC_REDIRECT_URI
-              value: {{ .Values.auth.oidc.redirectUri | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "threek8s.fullname" . }}-oidc
+                  key: oidc-redirect-uri
             - name: VITE_OIDC_SCOPE
-              value: {{ .Values.auth.oidc.scope | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "threek8s.fullname" . }}-oidc
+                  key: oidc-scope
             {{- else }}
             - name: VITE_AUTH_ENABLED
               value: "false"
