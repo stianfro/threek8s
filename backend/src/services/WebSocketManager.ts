@@ -4,6 +4,7 @@ import { Server } from "http";
 import { IncomingMessage } from "http";
 import { WebSocketMessage, WebSocketMessageFactory } from "../models/Events";
 import { TokenValidator } from "./TokenValidator";
+import { Buffer } from "buffer";
 
 interface Client {
   id: string;
@@ -37,7 +38,14 @@ export class WebSocketManager extends EventEmitter {
     this.wss = new WebSocketServer({
       server,
       path: "/ws",
-      maxPayload: 10 * 1024 * 1024, // 10MB
+      maxPayload: 1 * 1024 * 1024, // Reduced to 1MB for security
+      handleProtocols: (protocols) => {
+        // Accept the access_token protocol if provided
+        if (protocols.has("access_token")) {
+          return "access_token";
+        }
+        return false;
+      },
     });
 
     this.setupWebSocketServer();
@@ -101,7 +109,7 @@ export class WebSocketManager extends EventEmitter {
 
   /**
    * Authenticate WebSocket connection
-   * Checks for token in query parameter or Authorization header
+   * Checks for token in WebSocket subprotocol, then falls back to Authorization header
    */
   private async authenticateConnection(
     request: IncomingMessage,
@@ -112,12 +120,25 @@ export class WebSocketManager extends EventEmitter {
     }
 
     try {
-      // Try to get token from query parameter
-      const url = request.url || "";
-      const params = new URLSearchParams(url.split("?")[1] || "");
-      let token = params.get("token");
+      let token: string | null = null;
 
-      // If not in query, try Authorization header
+      // Try to get token from WebSocket subprotocol
+      const protocols = request.headers["sec-websocket-protocol"];
+      if (protocols) {
+        const protocolList = Array.isArray(protocols)
+          ? protocols
+          : protocols.split(",").map((p) => p.trim());
+
+        const tokenIndex = protocolList.indexOf("access_token");
+        if (tokenIndex !== -1 && protocolList[tokenIndex + 1]) {
+          // Decode base64url token
+          const encodedToken = protocolList[tokenIndex + 1];
+          const base64 = encodedToken.replace(/-/g, "+").replace(/_/g, "/");
+          token = Buffer.from(base64, "base64").toString("utf-8");
+        }
+      }
+
+      // Fallback: Try Authorization header (for backward compatibility)
       if (!token) {
         const authHeader = request.headers["authorization"];
         if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -145,7 +166,30 @@ export class WebSocketManager extends EventEmitter {
     const namespaces = params.get("namespaces");
 
     if (namespaces) {
-      return namespaces.split(",").map((ns) => ns.trim());
+      // Kubernetes namespace validation
+      // eslint-disable-next-line security/detect-unsafe-regex
+      const k8sNamespaceRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+
+      const validated = namespaces
+        .split(",")
+        .map((ns) => ns.trim())
+        .filter((ns) => {
+          // Must be 1-63 characters
+          if (ns.length === 0 || ns.length > 63) {
+            console.warn(`Invalid namespace length: ${ns}`);
+            return false;
+          }
+
+          // Must match Kubernetes naming rules
+          if (!k8sNamespaceRegex.test(ns)) {
+            console.warn(`Invalid namespace format: ${ns}`);
+            return false;
+          }
+
+          return true;
+        });
+
+      return validated.length > 0 ? validated : undefined;
     }
 
     return undefined;

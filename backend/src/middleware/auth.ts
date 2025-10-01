@@ -78,13 +78,17 @@ export function createAuthMiddleware(config: OidcConfig) {
         const audienceValid = aud.includes(config.audience) || appid === config.audience;
 
         if (!audienceValid) {
+          const errorDetails =
+            process.env.NODE_ENV === "development" ? "Audience validation failed" : undefined;
+
+          console.error(
+            `[AUTH] Audience validation failed for token. Expected: ${config.audience}`,
+          );
+
           return res.status(401).json({
             error: "UNAUTHORIZED",
             message: "Invalid token audience",
-            details:
-              process.env.NODE_ENV === "development"
-                ? `Expected: ${config.audience}, Got aud: ${aud.join(", ")}, appid: ${appid}`
-                : undefined,
+            details: errorDetails,
           });
         }
       }

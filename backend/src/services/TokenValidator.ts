@@ -35,9 +35,12 @@ export class TokenValidator {
    */
   async validateToken(token: string): Promise<jwt.JwtPayload | string> {
     if (!this.config.enabled) {
-      // When auth is disabled, we still return a valid result but log a warning
-      console.warn("Token validation called but auth is disabled");
-      return { sub: "anonymous" };
+      console.debug("Token validation skipped - authentication is disabled");
+      return {
+        sub: "system",
+        auth_disabled: true,
+        timestamp: new Date().toISOString(),
+      };
     }
 
     if (!token) {

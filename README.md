@@ -216,6 +216,29 @@ ThreeK8s supports optional OIDC (OpenID Connect) authentication. When enabled, u
 - **Secure**: JWT token validation, automatic token refresh, WebSocket authentication
 - **Production-Ready**: Includes Helm chart configuration and deployment examples
 
+### Security Considerations
+
+**Token Storage**: This implementation uses `oidc-client-ts`, which stores tokens in browser sessionStorage. While convenient, this approach has security implications:
+
+- **XSS Risk**: If an attacker can execute JavaScript in your application, they can steal tokens
+- **Mitigation Strategies**:
+  - Strict Content Security Policy (CSP) headers are enabled by default
+  - Regular dependency updates to patch XSS vulnerabilities
+  - Use short token expiration times (recommended: 1 hour or less)
+  - Enable automatic silent token renewal
+  - Consider additional security layers (network isolation, IP allowlisting)
+
+**Alternative**: For higher security requirements, consider:
+- Using httpOnly cookies with SameSite=Strict
+- Implementing a backend-for-frontend (BFF) pattern
+- Using refresh token rotation
+
+**Current Configuration**:
+- Token expiration: Configured by your OIDC provider
+- Silent renewal: Enabled by default
+- Token refresh: Automatic before expiration
+- WebSocket authentication: Tokens passed via WebSocket subprotocol (not in URL)
+
 ### Quick Start
 
 Authentication is **disabled by default**. To enable it, configure both backend and frontend with your OIDC provider details.

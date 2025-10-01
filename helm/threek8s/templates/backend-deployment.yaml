@@ -55,11 +55,20 @@ spec:
             - name: AUTH_ENABLED
               value: "true"
             - name: OIDC_ISSUER
-              value: {{ .Values.auth.oidc.issuer | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "threek8s.fullname" . }}-oidc
+                  key: oidc-issuer
             - name: OIDC_AUDIENCE
-              value: {{ .Values.auth.oidc.audience | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "threek8s.fullname" . }}-oidc
+                  key: oidc-audience
             - name: OIDC_JWKS_URI
-              value: {{ .Values.auth.oidc.jwksUri | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "threek8s.fullname" . }}-oidc
+                  key: oidc-jwks-uri
             {{- else }}
             - name: AUTH_ENABLED
               value: "false"
