@@ -1,5 +1,10 @@
 // Runtime configuration - populated by Docker entrypoint
 window.__RUNTIME_CONFIG__ = {
   apiUrl: '${VITE_API_URL}',
-  wsUrl: '${VITE_WS_URL}'
+  wsUrl: '${VITE_WS_URL}',
+  authEnabled: ${VITE_AUTH_ENABLED},
+  oidcAuthority: '${VITE_OIDC_AUTHORITY}',
+  oidcClientId: '${VITE_OIDC_CLIENT_ID}',
+  oidcRedirectUri: '${VITE_OIDC_REDIRECT_URI}',
+  oidcScope: '${VITE_OIDC_SCOPE}'
 };
