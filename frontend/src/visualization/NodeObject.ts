@@ -140,7 +140,6 @@ export class NodeObject extends THREE.Group {
     };
   }
 
-
   public animate(deltaTime: number): void {
     if (this.selected) {
       this.outline.rotation.y += deltaTime * 0.5;
