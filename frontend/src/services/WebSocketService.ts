@@ -117,13 +117,41 @@ export class WebSocketService {
   }
 
   private handleMessage(message: WebSocketMessage): void {
-    console.log("[WebSocket] Received message:", message.type, message);
-
     switch (message.type) {
       case "state":
         if (this.onStateUpdateCallback) {
           this.onStateUpdateCallback(message.data as StateUpdate);
         }
+        break;
+
+      case "initial_state":
+        // Nodes + namespaces; pods arrive in subsequent initial_state_chunk frames.
+        if (this.onStateUpdateCallback) {
+          const d = message.data as {
+            nodes?: KubernetesNode[];
+            pods?: Pod[];
+            namespaces?: Namespace[];
+          };
+          this.onStateUpdateCallback({
+            nodes: d.nodes,
+            pods: d.pods,
+            namespaces: d.namespaces,
+          });
+        }
+        break;
+
+      case "initial_state_chunk":
+        if (this.onEventCallback) {
+          const d = message.data as { pods?: Pod[] };
+          const pods = d.pods || [];
+          for (const pod of pods) {
+            this.onEventCallback({ eventType: "pod", action: "added", resource: pod });
+          }
+        }
+        break;
+
+      case "initial_state_end":
+      case "connection":
         break;
 
       case "event":

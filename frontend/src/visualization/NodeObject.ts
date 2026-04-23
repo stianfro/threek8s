@@ -146,144 +146,69 @@ export class NodeObject extends THREE.Group {
     }
   }
 
-  public getPodSlotPosition(index: number, totalPods: number): THREE.Vector3 {
-    const { position } = this.getPodSlotInfo(index, totalPods);
-    return position;
-  }
+  // Cached per-frame grid: totalPods changes only when a pod is added/removed and
+  // scale only when the zone layout changes. Recomputing on every pod call was the
+  // O(n²) hot spot in updatePodsForNode.
+  private cachedGrid: {
+    totalPods: number;
+    scaleKey: number;
+    cols: number;
+    cellSize: number;
+    availableSpace: number;
+    podSize: number;
+    localY: number;
+  } | null = null;
 
   public getPodSlotInfoWorldSpace(
     index: number,
     totalPods: number,
   ): { position: THREE.Vector3; size: number } {
-    // Calculate pod positions in world space directly
-    // This accounts for the node's current position and scale
+    const scaleKey = Math.round(this.scale.x * 1000);
+    let grid = this.cachedGrid;
+    if (!grid || grid.totalPods !== totalPods || grid.scaleKey !== scaleKey) {
+      const baseNodeSize = 20;
+      const actualNodeSize = baseNodeSize * this.scale.x;
+      const nodeHeight = 0.1 * this.scale.x;
+      const margin = 2.0 * this.scale.x;
+      const availableSpace = actualNodeSize - 2 * margin;
+      const cols = Math.ceil(Math.sqrt(totalPods));
+      const rows = Math.ceil(totalPods / cols);
+      const cellSize = Math.min(availableSpace / cols, availableSpace / rows);
+      const maxPodSize = 2.5 * this.scale.x;
+      const minPodSize = 0.1 * this.scale.x;
+      const podSize = Math.max(minPodSize, Math.min(maxPodSize, cellSize * 0.85));
+      const localY = nodeHeight / 2 + (podSize * 0.3) / 2;
+      grid = { totalPods, scaleKey, cols, cellSize, availableSpace, podSize, localY };
+      this.cachedGrid = grid;
+    }
 
-    const baseNodeSize = 20;
-    const actualNodeSize = baseNodeSize * this.scale.x; // Get actual world size
-    const nodeHeight = 0.1 * this.scale.x; // Match the flatter node thickness
-
-    // Simple margin calculation
-    const margin = 2.0 * this.scale.x; // Margin from node edges
-    const availableSpace = actualNodeSize - 2 * margin;
-
-    // Calculate optimal grid layout
-    const cols = Math.ceil(Math.sqrt(totalPods));
-    const rows = Math.ceil(totalPods / cols);
-
-    // Simple pod size calculation - fill available space
-    const cellWidth = availableSpace / cols;
-    const cellHeight = availableSpace / rows;
-    const cellSize = Math.min(cellWidth, cellHeight);
-
-    // Pod size is 85% of cell size to leave gaps
-    let podSize = cellSize * 0.85;
-
-    // Apply min/max constraints based on scale
-    const maxPodSize = 2.5 * this.scale.x;
-    const minPodSize = 0.1 * this.scale.x;
-    podSize = Math.max(minPodSize, Math.min(maxPodSize, podSize));
-
-    // Calculate position for this specific pod
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-
-    // Simple grid positioning - start from top-left of available space
-    const startX = -availableSpace / 2;
-    const startZ = -availableSpace / 2;
-
-    // Position in center of each cell
-    const localX = startX + cellWidth * (col + 0.5);
-    const localZ = startZ + cellHeight * (row + 0.5);
-
-    // Place pods directly on top of the flat node surface
-    // Pod height is 0.3 * podSize (flatter pods)
-    const podHeight = podSize * 0.3;
-    const localY = nodeHeight / 2 + podHeight / 2; // Position based on actual pod height
-
-    // Add node's world position to get final world position
-    const worldPosition = new THREE.Vector3(
-      this.position.x + localX,
-      this.position.y + localY,
-      this.position.z + localZ,
-    );
+    const col = index % grid.cols;
+    const row = Math.floor(index / grid.cols);
+    const start = -grid.availableSpace / 2;
+    const localX = start + grid.cellSize * (col + 0.5);
+    const localZ = start + grid.cellSize * (row + 0.5);
 
     return {
-      position: worldPosition,
-      size: podSize,
-    };
-  }
-
-  public getPodSlotInfo(
-    index: number,
-    totalPods: number,
-    nodeScale: number = 1,
-  ): { position: THREE.Vector3; size: number } {
-    // Keep the old method for backwards compatibility
-    // Calculate grid dimensions based on BASE node size (geometry size)
-    const baseNodeSize = 20;
-    const nodeHeight = 0.1; // Match the flatter node thickness
-    const margin = 1; // Margin in local space
-    const availableSpace = baseNodeSize - 2 * margin;
-
-    // Calculate optimal grid layout
-    const cols = Math.ceil(Math.sqrt(totalPods));
-    const rows = Math.ceil(totalPods / cols);
-
-    // Calculate pod size based on available space
-    // Pods should scale to fill the available space
-    const podSpaceX = availableSpace / cols;
-    const podSpaceZ = availableSpace / rows;
-    const maxPodSize = Math.min(podSpaceX, podSpaceZ) * 0.85; // 85% of cell size for spacing
-
-    // Limit pod size to reasonable bounds
-    const podSize = Math.min(maxPodSize, 2.5); // Max size of 2.5
-    const actualPodSize = Math.max(podSize, 0.4); // Min size of 0.4
-
-    // Calculate actual spacing based on pod size
-    const spacingX = availableSpace / cols;
-    const spacingZ = availableSpace / rows;
-
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-
-    // Position pods to fill the entire node area (in local node space)
-    const x = -availableSpace / 2 + spacingX / 2 + col * spacingX;
-    // Pod height is 0.3 * actualPodSize (flatter pods)
-    const podHeight = actualPodSize * 0.3;
-    const y = nodeHeight / 2 + podHeight / 2; // Place pods directly on node surface
-    const z = -availableSpace / 2 + spacingZ / 2 + row * spacingZ;
-
-    return {
-      position: new THREE.Vector3(x, y, z),
-      size: actualPodSize * nodeScale, // Scale the pod size by the node's scale
+      position: new THREE.Vector3(
+        this.position.x + localX,
+        this.position.y + grid.localY,
+        this.position.z + localZ,
+      ),
+      size: grid.podSize,
     };
   }
 
   public dispose(): void {
-    // Release materials back to pool
-    if (this.mesh.material instanceof THREE.Material) {
-      this.geometryPool.releaseMaterial(this.mesh.material);
-    }
-
-    if (this.outline.material instanceof THREE.Material) {
-      this.geometryPool.releaseMaterial(this.outline.material);
-    }
-
-    // Dispose edges geometry and material (not pooled)
+    // Node mesh/outline materials are shared by color via GeometryPool; don't
+    // dispose them here - GeometryPool.dispose() handles them.
     if (this.edges) {
-      if (this.edges.geometry) this.edges.geometry.dispose();
+      this.edges.geometry.dispose();
       if (this.edges.material instanceof THREE.Material) {
         this.edges.material.dispose();
       }
     }
-
-    // Dispose label sprite if it exists
-    if (this.labelSprite) {
-      if (this.labelSprite.material instanceof THREE.Material) {
-        this.labelSprite.material.dispose();
-      }
+    if (this.labelSprite && this.labelSprite.material instanceof THREE.Material) {
+      this.labelSprite.material.dispose();
     }
-
-    // Don't dispose pooled geometries
   }
 }
