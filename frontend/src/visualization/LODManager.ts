@@ -71,19 +71,6 @@ export class LODManager {
     return this.currentLevel !== DetailLevel.MINIMAL;
   }
 
-  public getPodOpacity(): number {
-    switch (this.currentLevel) {
-      case DetailLevel.HIGH:
-        return 0.95;
-      case DetailLevel.MEDIUM:
-        return 0.7;
-      case DetailLevel.LOW:
-        return 0.3;
-      default:
-        return 0;
-    }
-  }
-
   public getNodeOpacity(): number {
     switch (this.currentLevel) {
       case DetailLevel.HIGH:

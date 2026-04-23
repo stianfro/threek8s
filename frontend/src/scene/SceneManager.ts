@@ -105,15 +105,10 @@ export class SceneManager {
   }
 
   private setupEventListeners(): void {
-    window.addEventListener("resize", this.handleResize.bind(this));
-    // T007 FIX: Removed duplicate mousemove listener
-    // Mouse events are handled in main.ts on viewport element
-    // this.renderer.domElement.addEventListener('mousemove', this.handleMouseMove.bind(this));
-    this.renderer.domElement.addEventListener("click", this.handleClick.bind(this));
-    this.renderer.domElement.addEventListener("dblclick", this.handleDoubleClick.bind(this));
+    window.addEventListener("resize", this.handleResize);
   }
 
-  private handleResize(): void {
+  private handleResize = (): void => {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
 
@@ -121,20 +116,12 @@ export class SceneManager {
     this.camera.updateProjectionMatrix();
 
     this.renderer.setSize(width, height);
-  }
+  };
 
   public handleMouseMove(event: MouseEvent): void {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-  }
-
-  private handleClick(_event: MouseEvent): void {
-    // Will be implemented for object selection
-  }
-
-  private handleDoubleClick(_event: MouseEvent): void {
-    // Will be implemented for camera focus
   }
 
   public start(): void {
@@ -202,17 +189,9 @@ export class SceneManager {
     this.controls.update();
   }
 
-  public forceRender(): void {
-    // Force an immediate render of the scene
-    this.renderer.render(this.scene, this.camera);
-  }
-
   public dispose(): void {
     this.stop();
-    window.removeEventListener("resize", this.handleResize.bind(this));
-    this.renderer.domElement.removeEventListener("mousemove", this.handleMouseMove.bind(this));
-    this.renderer.domElement.removeEventListener("click", this.handleClick.bind(this));
-    this.renderer.domElement.removeEventListener("dblclick", this.handleDoubleClick.bind(this));
+    window.removeEventListener("resize", this.handleResize);
 
     this.controls.dispose();
     this.renderer.dispose();

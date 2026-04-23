@@ -66,6 +66,9 @@ export interface MetricsMessage extends WebSocketMessage {
     runningPods: number;
     pendingPods: number;
     failedPods: number;
+    succeededPods: number;
+    unknownPods: number;
+    terminatingPods: number;
   };
 }
 

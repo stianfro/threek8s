@@ -111,13 +111,12 @@ async function initApp() {
     wsService.setAccessTokenProvider(() => authService.getAccessToken());
   }
 
-  // Set up state change listener
+  // Coalesce state changes into one visualization update per animation frame.
+  // Without this, a burst of WebSocket events triggers N full layout passes in the
+  // same tick, each of which is O(pods + nodes). One pass per frame is plenty.
   stateManager.onStateChange((state) => {
-    console.log("[Main] State changed, updating visualization");
-    visualizationManager.updateState(state);
+    visualizationManager.queueStateUpdate(state);
     updateUIMetrics(state);
-    // Force re-render
-    sceneManager.forceRender();
   });
 
   // Set up WebSocket event handlers
@@ -152,8 +151,6 @@ async function initApp() {
 
   // Set up interaction handlers
   viewport.addEventListener("mousemove", (e) => visualizationManager.handleMouseMove(e));
-  viewport.addEventListener("click", (e) => visualizationManager.handleClick(e));
-  viewport.addEventListener("dblclick", (e) => visualizationManager.handleDoubleClick(e));
 
   // Start animation loop
   sceneManager.start();

@@ -13,7 +13,15 @@ interface Client {
   namespaceFilter?: string[];
   lastActivity: Date;
   authenticated: boolean;
+  backpressureLoggedAt?: number;
 }
+
+// Broadcast is skipped for clients whose outgoing buffer exceeds this ceiling so a slow
+// client can't back up the server. On recovery the next broadcast resumes.
+const BACKPRESSURE_BYTES = 4 * 1024 * 1024;
+// Per-IP token bucket: 10 connections / 60s rolling window.
+const CONNECT_RATE_LIMIT = 10;
+const CONNECT_RATE_WINDOW_MS = 60_000;
 
 export class WebSocketManager extends EventEmitter {
   private wss: WebSocketServer;
@@ -22,6 +30,7 @@ export class WebSocketManager extends EventEmitter {
   private heartbeatIntervalMs: number;
   private heartbeatTimeoutMs: number; // Keeping for potential future use
   private tokenValidator: TokenValidator | null;
+  private recentConnectsByIp: Map<string, number[]> = new Map();
 
   constructor(
     server: Server,
@@ -38,7 +47,13 @@ export class WebSocketManager extends EventEmitter {
     this.wss = new WebSocketServer({
       server,
       path: "/ws",
-      maxPayload: 1 * 1024 * 1024, // Reduced to 1MB for security
+      // Initial-state messages carry all cluster nodes and chunked pods; 8MB gives
+      // headroom for large clusters while still bounding worst-case memory.
+      maxPayload: 8 * 1024 * 1024,
+      perMessageDeflate: {
+        threshold: 1024,
+        zlibDeflateOptions: { level: 6 },
+      },
       handleProtocols: (protocols) => {
         // Accept the access_token protocol if provided
         if (protocols.has("access_token")) {
@@ -55,6 +70,15 @@ export class WebSocketManager extends EventEmitter {
   private setupWebSocketServer(): void {
     this.wss.on("connection", async (ws: WebSocket, request: IncomingMessage) => {
       const clientId = this.generateClientId();
+
+      // Enforce a simple per-IP WS connect rate limit to stop connection-spam clients
+      // from exhausting memory (each client allocates a heartbeat timer and state).
+      const ip = this.extractClientIp(request);
+      if (!this.checkConnectRateLimit(ip)) {
+        console.warn(`Client ${clientId} rejected: connect rate limit exceeded for ${ip}`);
+        ws.close(1013, "Connect rate limit exceeded");
+        return;
+      }
 
       // Check authentication if enabled
       const authResult = await this.authenticateConnection(request);
@@ -105,6 +129,28 @@ export class WebSocketManager extends EventEmitter {
 
   private generateClientId(): string {
     return `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private extractClientIp(request: IncomingMessage): string {
+    const forwarded = request.headers["x-forwarded-for"];
+    if (typeof forwarded === "string" && forwarded.length > 0) {
+      const first = forwarded.split(",")[0];
+      if (first) return first.trim();
+    }
+    return request.socket.remoteAddress || "unknown";
+  }
+
+  private checkConnectRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const cutoff = now - CONNECT_RATE_WINDOW_MS;
+    const history = (this.recentConnectsByIp.get(ip) || []).filter((t) => t >= cutoff);
+    if (history.length >= CONNECT_RATE_LIMIT) {
+      this.recentConnectsByIp.set(ip, history);
+      return false;
+    }
+    history.push(now);
+    this.recentConnectsByIp.set(ip, history);
+    return true;
   }
 
   /**
@@ -271,19 +317,30 @@ export class WebSocketManager extends EventEmitter {
     }
   }
 
+  private isBackpressured(client: Client): boolean {
+    if (client.ws.bufferedAmount <= BACKPRESSURE_BYTES) return false;
+    const now = Date.now();
+    if (!client.backpressureLoggedAt || now - client.backpressureLoggedAt > 30_000) {
+      console.warn(
+        `Client ${client.id} backpressured: ${client.ws.bufferedAmount} bytes buffered, skipping broadcast`,
+      );
+      client.backpressureLoggedAt = now;
+    }
+    return true;
+  }
+
   broadcast(message: WebSocketMessage, filterFn?: (client: Client) => boolean): void {
     const messageStr = JSON.stringify(message);
 
     this.clients.forEach((client, clientId) => {
-      if (client.ws.readyState === WebSocket.OPEN) {
-        if (!filterFn || filterFn(client)) {
-          try {
-            client.ws.send(messageStr);
-          } catch (error) {
-            console.error(`Failed to broadcast to client ${clientId}:`, error);
-            this.emit("broadcastError", { clientId, error });
-          }
-        }
+      if (client.ws.readyState !== WebSocket.OPEN) return;
+      if (filterFn && !filterFn(client)) return;
+      if (this.isBackpressured(client)) return;
+      try {
+        client.ws.send(messageStr);
+      } catch (error) {
+        console.error(`Failed to broadcast to client ${clientId}:`, error);
+        this.emit("broadcastError", { clientId, error });
       }
     });
   }

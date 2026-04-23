@@ -42,4 +42,7 @@ export interface ClusterMetrics {
   runningPods: number;
   pendingPods: number;
   failedPods: number;
+  succeededPods: number;
+  unknownPods: number;
+  terminatingPods: number;
 }

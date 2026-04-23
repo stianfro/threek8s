@@ -56,6 +56,10 @@ export class StateManager extends EventEmitter {
     }
   }
 
+  hasPod(podUid: string): boolean {
+    return this.state.getPod(podUid) !== undefined;
+  }
+
   // Namespace operations
   addNamespace(namespace: Namespace): void {
     this.state.addNamespace(namespace);
