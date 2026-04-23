@@ -9,7 +9,7 @@ import {
   VersionInfo,
 } from "@kubernetes/client-node";
 import { KubernetesNode } from "../models/KubernetesNode";
-import { Pod } from "../models/Pod";
+import { Pod, isPodVisible } from "../models/Pod";
 import { Namespace } from "../models/Namespace";
 import { EventEmitter } from "events";
 import * as fs from "fs";
@@ -131,7 +131,7 @@ export class KubernetesService extends EventEmitter {
     }
     const pods =
       (response as { body?: { items: V1Pod[] } }).body || (response as { items: V1Pod[] });
-    return pods.items.map((pod) => this.transformPod(pod));
+    return pods.items.map((pod) => this.transformPod(pod)).filter(isPodVisible);
   }
 
   async getNamespaces(): Promise<Namespace[]> {

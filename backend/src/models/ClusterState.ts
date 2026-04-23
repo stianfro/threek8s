@@ -196,13 +196,30 @@ export class ClusterStateModel implements ClusterState {
     const pods = Array.from(this.pods.values());
     const nodes = Array.from(this.nodes.values());
 
+    const counts = {
+      Running: 0,
+      Pending: 0,
+      Failed: 0,
+      Succeeded: 0,
+      Unknown: 0,
+      Terminating: 0,
+    };
+    for (const pod of pods) {
+      if (pod.deletionTimestamp) counts.Terminating++;
+      const phase = pod.phase;
+      if (phase in counts) counts[phase as keyof typeof counts]++;
+    }
+
     return {
       totalNodes: nodes.length,
       readyNodes: nodes.filter((n) => n.status === "Ready").length,
       totalPods: pods.length,
-      runningPods: pods.filter((p) => p.phase === "Running").length,
-      pendingPods: pods.filter((p) => p.phase === "Pending").length,
-      failedPods: pods.filter((p) => p.phase === "Failed").length,
+      runningPods: counts.Running,
+      pendingPods: counts.Pending,
+      failedPods: counts.Failed,
+      succeededPods: counts.Succeeded,
+      unknownPods: counts.Unknown,
+      terminatingPods: counts.Terminating,
     };
   }
 

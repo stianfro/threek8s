@@ -103,3 +103,10 @@ export class PodModel implements Pod {
     }
   }
 }
+
+// Succeeded and Failed pods are cluster debris: Kubernetes leaves them around long
+// after they stop consuming resources. Filter at the source so the visualization and
+// WebSocket stream never carry them.
+export function isPodVisible(pod: Pod): boolean {
+  return pod.phase !== "Succeeded" && pod.phase !== "Failed";
+}

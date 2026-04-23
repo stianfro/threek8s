@@ -5,8 +5,9 @@ import { StateManager } from "./StateManager";
 import { WebSocketManager } from "./WebSocketManager";
 import { WatchEvent, WebSocketMessageFactory, EventType } from "../models/Events";
 import { KubernetesNode } from "../models/KubernetesNode";
-import { Pod } from "../models/Pod";
+import { Pod, isPodVisible } from "../models/Pod";
 import { Namespace } from "../models/Namespace";
+import { ClusterMetrics } from "../models/ValueObjects";
 
 export class EventProcessor extends EventEmitter {
   private kubernetesService: KubernetesService;
@@ -17,6 +18,9 @@ export class EventProcessor extends EventEmitter {
   private processingInterval: NodeJS.Timer | null = null;
   private batchSize: number = 50;
   private batchIntervalMs: number = 100;
+  private static readonly MAX_QUEUE_SIZE = 10000;
+  private static readonly INITIAL_POD_CHUNK = 500;
+  private droppedEventCount: number = 0;
 
   constructor(
     kubernetesService: KubernetesService,
@@ -96,6 +100,15 @@ export class EventProcessor extends EventEmitter {
   }
 
   private queueEvent(event: WatchEvent, resourceType: string): void {
+    if (this.eventQueue.length >= EventProcessor.MAX_QUEUE_SIZE) {
+      this.eventQueue.shift();
+      this.droppedEventCount++;
+      if (this.droppedEventCount === 1 || this.droppedEventCount % 1000 === 0) {
+        console.warn(
+          `EventProcessor: event queue full, dropped ${this.droppedEventCount} oldest events`,
+        );
+      }
+    }
     this.eventQueue.push({
       ...event,
       object: { ...(event.object as object), _resourceType: resourceType },
@@ -159,17 +172,32 @@ export class EventProcessor extends EventEmitter {
 
   private processPodEvent(event: WatchEvent): void {
     const pod = this.kubernetesService["transformPod"](event.object as never);
+    const visible = isPodVisible(pod);
 
-    switch (event.type) {
-      case "ADDED":
-        this.stateManager.addPod(pod);
-        break;
-      case "MODIFIED":
-        this.stateManager.updatePod(pod);
-        break;
-      case "DELETED":
+    if (event.type === "DELETED") {
+      this.stateManager.deletePod(pod.uid);
+      return;
+    }
+
+    if (!visible) {
+      // Synthesize a DELETED for pods that transitioned into Succeeded/Failed so the
+      // frontend drops them instead of accumulating indefinitely.
+      if (this.stateManager.hasPod(pod.uid)) {
         this.stateManager.deletePod(pod.uid);
-        break;
+      }
+      return;
+    }
+
+    if (event.type === "ADDED") {
+      this.stateManager.addPod(pod);
+    } else {
+      // MODIFIED: handle the case where a pod first entered state while invisible and
+      // is now visible (updatePod would silently no-op). addPod covers both.
+      if (this.stateManager.hasPod(pod.uid)) {
+        this.stateManager.updatePod(pod);
+      } else {
+        this.stateManager.addPod(pod);
+      }
     }
   }
 
@@ -215,14 +243,7 @@ export class EventProcessor extends EventEmitter {
     this.webSocketManager.broadcast(message);
   }
 
-  private broadcastMetrics(metrics: {
-    totalNodes: number;
-    readyNodes: number;
-    totalPods: number;
-    runningPods: number;
-    pendingPods: number;
-    failedPods: number;
-  }): void {
+  private broadcastMetrics(metrics: ClusterMetrics): void {
     const message = {
       type: "metrics",
       data: metrics,
@@ -234,21 +255,43 @@ export class EventProcessor extends EventEmitter {
   private async sendInitialState(clientId: string): Promise<void> {
     try {
       const state = this.stateManager.getState();
-      const message = WebSocketMessageFactory.createInitialStateMessage({
+
+      // Send nodes and namespaces synchronously; they are tiny. Start pods empty so the
+      // frontend can render the grid immediately, then stream pods in chunked batches.
+      const headerMessage = WebSocketMessageFactory.createInitialStateMessage({
         nodes: state.nodes,
-        pods: state.pods,
+        pods: [],
         namespaces: state.namespaces,
       });
+      this.webSocketManager.sendToClient(clientId, headerMessage);
 
-      this.webSocketManager.sendToClient(clientId, message);
-
-      // Also send current metrics
-      const metricsMessage = {
+      this.webSocketManager.sendToClient(clientId, {
         type: "metrics",
         data: state.metrics,
         timestamp: new Date().toISOString(),
-      };
-      this.webSocketManager.sendToClient(clientId, metricsMessage);
+      });
+
+      const pods = state.pods;
+      for (let i = 0; i < pods.length; i += EventProcessor.INITIAL_POD_CHUNK) {
+        const chunk = pods.slice(i, i + EventProcessor.INITIAL_POD_CHUNK);
+        this.webSocketManager.sendToClient(clientId, {
+          type: "initial_state_chunk",
+          data: { pods: chunk, offset: i, total: pods.length },
+          timestamp: new Date().toISOString(),
+        });
+        // Yield to the event loop between chunks so the socket drains and other clients
+        // aren't starved on large initial sends.
+        if (i + EventProcessor.INITIAL_POD_CHUNK < pods.length) {
+          // eslint-disable-next-line no-undef
+          await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+      }
+
+      this.webSocketManager.sendToClient(clientId, {
+        type: "initial_state_end",
+        data: { podCount: pods.length },
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
       console.error(`Failed to send initial state to client ${clientId}:`, error);
       this.webSocketManager.sendToClient(
@@ -299,6 +342,10 @@ export class EventProcessor extends EventEmitter {
 
   getQueueSize(): number {
     return this.eventQueue.length;
+  }
+
+  getDroppedEventCount(): number {
+    return this.droppedEventCount;
   }
 
   isProcessing(): boolean {
