@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/stianfro/threek8s/compare/v1.6.1...v1.7.0) (2026-04-23)
+
+
+### Features
+
+* revamp 3D rendering and backend transport ([f0ea13f](https://github.com/stianfro/threek8s/commit/f0ea13ff0bdb824e6de2de28ce34067de0536381))
+
 ## [1.6.1](https://github.com/stianfro/threek8s/compare/v1.6.0...v1.6.1) (2025-10-01)
 
 
